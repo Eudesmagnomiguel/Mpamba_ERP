@@ -1,0 +1,435 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark mode via class */
+@custom-variant dark (&:is(.dark *));
+
+/* =========================
+   🎨 DESIGN TOKENS
+========================= */
+
+:root {
+  /* ========= BRAND =========
+     Grafite quase-preto (precisão/tecnologia) com terracota como destaque
+     (energia/calor) — identidade de alto contraste, mais "tech studio" do
+     que "banco tradicional". Grafite domina superfícies e texto; terracota
+     é usada com intenção, nunca em elementos repetidos. */
+  --primary: #1E2124;
+  --primary-hover: #14171A;
+  --primary-soft: #E9E8E6;
+  --primary-foreground: #FFFFFF;
+
+  /* Segunda cor de marca, usada nos gradientes e detalhes junto ao --primary */
+  --accent-warm: #C4643A;
+  --accent-warm-hover: #A8502C;
+
+  /* ========= BUTTON ========= */
+  --button-primary: #1E2124;
+  --button-primary-hover: #14171A;
+
+  /* ========= SEMANTIC =========
+     Independentes da marca — não mudam com o tema visual. */
+  --success: #27AE60;
+  --danger: #EB5757;
+  --warning: #F2C94C;
+  --info: #2D9CDB;
+
+  /* ========= BACKGROUND ========= */
+  --background: #FAFAF9;
+  --background-secondary: #FFFFFF;
+
+  /* ========= TEXT ========= */
+  --foreground: #18181B;
+  --foreground-muted: #726F6B;
+
+  /* ========= UI ========= */
+  --border: #E6E4E1;
+  --input: #E6E4E1;
+  --ring: #C4643A;
+
+  /* ========= CARDS / POPOVER ========= */
+  --card: #FFFFFF;
+  --card-foreground: #18181B;
+  --popover: #FFFFFF;
+  --popover-foreground: #18181B;
+
+  /* ========= MUTED ========= */
+  --muted: #F0EFEC;
+  --muted-foreground: #726F6B;
+
+  /* ========= ACCENT ========= */
+  --accent: #F0EFEC;
+  --accent-foreground: #18181B;
+
+  /* ========= DESTRUCTIVE ========= */
+  --destructive: #EB5757;
+
+  /* ========= CHART ========= */
+  --chart-1: #1E2124;
+  --chart-2: #C4643A;
+  --chart-3: #27AE60;
+  --chart-4: #F2C94C;
+  --chart-5: #EB5757;
+
+  /* ========= SIDEBAR ========= */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #18181B;
+  --sidebar-primary: #1E2124;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F0EFEC;
+  --sidebar-accent-foreground: #18181B;
+  --sidebar-border: #E6E4E1;
+  --sidebar-ring: #C4643A;
+
+  /* ========= GRADIENTS =========
+     Usados com moderação em heros, sidebar e CTAs principais — não em
+     todo o lado — para transmitir modernidade sem parecer um template
+     genérico de landing page gerada por IA. */
+  --gradient-brand: linear-gradient(135deg, #101113 0%, #1E2124 55%, #C4643A 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(30, 33, 36, 0.08) 0%, rgba(196, 100, 58, 0.08) 100%);
+  --gradient-sidebar: linear-gradient(195deg, #101113 0%, #1E2124 60%, #221A16 100%);
+  --gradient-text: linear-gradient(135deg, #1E2124 0%, #C4643A 100%);
+
+  /* ========= RADIUS ========= */
+  --radius: 0.625rem;
+
+  /* ========= FONT =========
+     Ligadas via next/font/google em app/layout.tsx (Figtree = corpo,
+     Sora = títulos); os valores abaixo são apenas o fallback caso as
+     variáveis não estejam presentes. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: monospace;
+}
+
+/* =========================
+   🌙 DARK MODE (CLASS BASED)
+========================= */
+
+.dark {
+  --background: #17181A;
+  --background-secondary: #1F2123;
+
+  --foreground: #EDEDEC;
+  --foreground-muted: #9C9994;
+
+  --border: #2E2D2B;
+  --input: #2E2D2B;
+
+  /* Em modo escuro, o grafite deixa de ter contraste suficiente para ser
+     "primary" — a cor accionável passa a ser a terracota, mais clara aqui
+     do que no tema claro, mantendo o grafite como cor de superfície. */
+  --primary: #D4713F;
+  --primary-hover: #E08152;
+  --primary-soft: #2A1F19;
+  --primary-foreground: #FFFFFF;
+
+  --accent-warm: #F2A65A;
+  --accent-warm-hover: #F7B87A;
+
+  --ring: #D4713F;
+
+  --card: #1F2123;
+  --card-foreground: #EDEDEC;
+
+  --popover: #1F2123;
+  --popover-foreground: #EDEDEC;
+
+  --muted: #262725;
+  --muted-foreground: #9C9994;
+
+  --accent: #262725;
+  --accent-foreground: #EDEDEC;
+
+  --destructive: #F87171;
+
+  --chart-1: #D4713F;
+  --chart-2: #F2A65A;
+
+  --sidebar: #1F2123;
+  --sidebar-foreground: #EDEDEC;
+  --sidebar-primary: #D4713F;
+  --sidebar-accent: #262725;
+  --sidebar-border: #2E2D2B;
+  --sidebar-ring: #D4713F;
+
+  --gradient-brand: linear-gradient(135deg, #0E0F10 0%, #1B1C1E 48%, #D4713F 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(212, 113, 63, 0.14) 0%, rgba(242, 166, 90, 0.14) 100%);
+  --gradient-sidebar: linear-gradient(195deg, #0E0F10 0%, #1A1B1D 58%, #1F1712 100%);
+  --gradient-text: linear-gradient(135deg, #E08152 0%, #F2A65A 100%);
+}
+
+/* =========================
+   🎯 TAILWIND THEME BRIDGE
+========================= */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-warm-hover: var(--accent-warm-hover);
+
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
+}
+
+/* =========================
+   🌍 BASE
+========================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* =========================
+   ✍️ BASE LAYER (TAILWIND)
+========================= */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+}
+
+/* =========================
+   🌈 GRADIENTES DE MARCA
+   Uso deliberado e pontual (hero, sidebar, CTA principal) — não em
+   botões secundários ou elementos repetidos, para manter um ar
+   profissional em vez de "template genérico".
+========================= */
+
+@layer utilities {
+  .gradient-brand {
+    background-image: var(--gradient-brand);
+  }
+
+  .gradient-brand-soft {
+    background-image: var(--gradient-brand-soft);
+  }
+
+  .gradient-sidebar {
+    background-image: var(--gradient-sidebar);
+  }
+
+  .gradient-text {
+    background-image: var(--gradient-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Textura fina em grelha para dar profundidade a secções com gradiente
+     sem recorrer ao clichê de "blobs" desfocados coloridos. */
+  .bg-grid-overlay {
+    background-image:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Ponto que percorre uma linha de ligação — usado para visualizar módulos
+     a comunicar entre si (ex.: painel de login), em vez de números fictícios. */
+  .animate-flow-dot {
+    animation: flow-dot 2.6s ease-in-out infinite;
+  }
+
+  /* Textura do fundo principal da aplicação (área de conteúdo por trás de
+     todos os módulos): grelha de pontos + duas manchas suaves de marca
+     (terracota/grafite) nos cantos, com deriva lenta — dá profundidade e
+     um toque de cor ao "fundo branco" sem recorrer a blobs pesados. */
+  .bg-app-canvas {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(ellipse 60% 50% at 10% 0%, rgba(196, 100, 58, 0.10), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(30, 33, 36, 0.07), transparent 65%),
+      radial-gradient(rgba(30, 33, 36, 0.16) 1.2px, transparent 1.2px);
+    background-size: auto, auto, 26px 26px;
+    background-position: 0 0, 0 0, 0 0;
+    background-repeat: no-repeat, no-repeat, repeat;
+    animation: canvas-drift 34s ease-in-out infinite;
+  }
+
+  .dark .bg-app-canvas {
+    background-image:
+      radial-gradient(ellipse 60% 50% at 10% 0%, rgba(212, 113, 63, 0.14), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255, 255, 255, 0.06), transparent 65%),
+      radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
+  }
+}
+
+@keyframes canvas-drift {
+  0%, 100% { background-position: 0 0, 0 0, 0 0; }
+  50% { background-position: 6px -4px, -6px 4px, 26px 26px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-app-canvas {
+    animation: none;
+  }
+}
+
+@keyframes flow-dot {
+  0% { left: 0%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  88% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { left: 100%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flow-dot {
+    animation: none;
+    opacity: 0.7;
+    left: 50% !important;
+  }
+}
+
+/* =========================
+   🖱️ SCROLLBAR — identidade da marca
+   Aplica-se a toda a aplicação (Firefox) e reforça-se com os pseudo-
+   elementos WebKit para o thumb/track ficarem alinhados com --primary.
+========================= */
+html {
+  scrollbar-color: var(--primary-soft) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--primary-soft);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-warm);
+}
+
+/* Em modo escuro, --primary-soft é demasiado próximo do fundo — usa-se a
+   terracota (já mais clara neste tema) para manter contraste visível. */
+.dark {
+  scrollbar-color: var(--accent-warm) transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--accent-warm);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-warm-hover);
+}
+
+/* Variante mais fina para painéis internos com scroll próprio
+   (formulários, listas, modais) — usar via className="custom-scrollbar". */
+.custom-scrollbar {
+  scrollbar-color: var(--accent-warm) transparent;
+  scrollbar-width: thin;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--accent-warm);
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-warm-hover);
+}

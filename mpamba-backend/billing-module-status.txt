@@ -1,0 +1,31 @@
+Billing independente - estado atual e o que falta
+
+O que o Billing já tem:
+- Clientes: modelo e CRUD existentes no projeto.
+- Serviços: catálogo de serviços com taxa padrão.
+- Faturas: criação, edição de rascunho, emissão, cancelamento, duplicação e PDF/email.
+- Séries: numeração sequencial por ano.
+- Regras fiscais: regras por escopo (global, cliente, categoria, serviço, categoria de serviço).
+
+O que ainda falta para o módulo ficar completo no modelo SaaS modular:
+- Proformas reais: modelo, rotas e fluxo próprio.
+- Notas de crédito reais: modelo e processo fiscal próprio.
+- Estado de pagamento separado: Pendente, Pago, Parcial, Vencido.
+- Recibo simples: comprovativo ligado à fatura, sem virar tesouraria.
+- Tela de documentos ligada ao backend: hoje ainda está mock.
+- Integração condicional com Stock: mostrar stock apenas se o módulo existir e baixar stock ao emitir.
+- Integração condicional com Tesouraria: criar conta a receber/movimento/reconciliação apenas se o módulo existir.
+
+O que não deve existir diretamente no Billing:
+- Gestão de stock.
+- Inventário.
+- Armazém.
+- Caixa.
+- Bancos.
+- Fluxo financeiro.
+- Reconciliação.
+- Compras.
+
+Regra de produto:
+- O Billing deve funcionar sozinho com o mínimo necessário para faturar.
+- Os módulos Stock e Tesouraria devem aparecer como capacidades opcionais, não como dependências obrigatórias.

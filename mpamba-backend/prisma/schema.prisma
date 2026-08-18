@@ -1,0 +1,899 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  name               String
+  urlImageProfile    String?
+  email              String              @unique
+  username           String?             @unique
+  passwordHash       String
+  isActive           Boolean             @default(true)
+  hasCustomModuleAccess Boolean          @default(false)
+  organizationId     String?
+  onboardingCompletedAt DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  creditNotes        CreditNote[]
+  financialMovements FinancialMovement[]
+  invoices           Invoice[]
+  proformas          Proforma[]
+  receipts           Receipt[]
+  stockMovements     StockMovement[]
+  organization       Organization?       @relation(fields: [organizationId], references: [id])
+  roles              UserRole[]
+  passwordResetTokens PasswordResetToken[]
+  notificationRecipients NotificationRecipient[]
+  notificationsTargeted  Notification[]      @relation("NotificationTargetUser")
+  notificationsCreated   Notification[]      @relation("NotificationCreatedBy")
+  cashSessionsOpened     CashSession[]       @relation("CashSessionOpenedBy")
+  cashSessionsClosed     CashSession[]       @relation("CashSessionClosedBy")
+  journalEntries         JournalEntry[]
+  moduleAccess           UserModule[]
+}
+
+model UserModule {
+  userId   String
+  moduleId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, moduleId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  isUsed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Organization {
+  id                  String               @id @default(uuid())
+  name                String
+  urlImageLogo        String?
+  nif                 String?              @unique
+  address             String?
+  phone               String?
+  email               String?
+  isActive            Boolean              @default(true)
+  planId              String?
+  invoiceFooterNote   String?
+  invoiceDueDays      Int                  @default(30)
+  posInvoiceThreshold Float                @default(50000)
+  createdAt           DateTime             @default(now())
+  activationCodes     ActivationCode[]
+  creditNotes         CreditNote[]
+  customers           Customer[]
+  financialAccounts   FinancialAccount[]
+  financialCategories FinancialCategory[]
+  financialMovements  FinancialMovement[]
+  invoices            Invoice[]
+  invoiceSeries       InvoiceSeries[]
+  plan                Plan?                @relation(fields: [planId], references: [id])
+  modules             OrganizationModule[]
+  products            Product[]
+  productCategories   ProductCategory[]
+  proformas           Proforma[]
+  receipts            Receipt[]
+  roles               Role[]
+  services            Service[]
+  stockMovements      StockMovement[]
+  subscription        Subscription?
+  subscriptionRequests SubscriptionRequest[]
+  suppliers           Supplier[]
+  taxRules            TaxRule[]
+  bankStatements      BankStatement[]
+  costCenters         CostCenter[]
+  exchangeRates       ExchangeRate[]
+  payables            Payable[]
+  receivables         Receivable[]
+  users               User[]
+  notifications       Notification[]
+  cashSessions        CashSession[]
+  accountingAccounts  AccountingAccount[]
+  journalEntries      JournalEntry[]
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  organizationId  String             @unique
+  planId          String
+  status          SubscriptionStatus @default(TRIAL)
+  startDate       DateTime           @default(now())
+  endDate         DateTime?
+  nextBillingDate DateTime?
+  autoRenew       Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  organization    Organization       @relation(fields: [organizationId], references: [id])
+  plan            Plan               @relation(fields: [planId], references: [id])
+}
+
+model SubscriptionRequest {
+  id              String                    @id @default(uuid())
+  organizationId  String
+  planId          String
+  type            SubscriptionRequestType
+  status          SubscriptionRequestStatus @default(PENDING)
+  notes           String?
+  paymentReference String?
+  adminResponse   String?
+  activationCode  String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  organization    Organization              @relation(fields: [organizationId], references: [id])
+  plan            Plan                      @relation(fields: [planId], references: [id])
+}
+
+enum SubscriptionRequestType {
+  RENEWAL
+  UPGRADE
+  DOWNGRADE
+}
+
+enum SubscriptionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Role {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  organizationId String
+  moduleId       String?
+  module         Module?          @relation(fields: [moduleId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  permissions    RolePermission[]
+  users          UserRole[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Plan {
+  id              String           @id @default(uuid())
+  code            String           @unique
+  name            String
+  description     String?
+  price           Float
+  interval        String           @default("month")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  activationCodes ActivationCode[]
+  organizations   Organization[]
+  modules         PlanModule[]
+  subscriptions   Subscription[]
+  subscriptionRequests SubscriptionRequest[]
+}
+
+model PlanModule {
+  planId   String
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id])
+  plan     Plan   @relation(fields: [planId], references: [id])
+
+  @@id([planId, moduleId])
+}
+
+model ActivationCode {
+  id             String        @id @default(uuid())
+  code           String        @unique
+  organizationId String?
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime      @default(now())
+  isUsed         Boolean       @default(false)
+  planId         String
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  plan           Plan          @relation(fields: [planId], references: [id])
+}
+
+model Module {
+  id            String               @id @default(uuid())
+  code          String               @unique
+  name          String
+  description   String?
+  organizations OrganizationModule[]
+  planModules   PlanModule[]
+  roles         Role[]
+  userAccess    UserModule[]
+}
+
+model OrganizationModule {
+  organizationId String
+  moduleId       String
+  isActive       Boolean      @default(true)
+  module         Module       @relation(fields: [moduleId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@id([organizationId, moduleId])
+}
+
+model Product {
+  id              String           @id @default(uuid())
+  name            String
+  sku             String
+  unit            String
+  description     String?
+  price           Float?           @default(0)
+  isActive        Boolean          @default(true)
+  currentQuantity Float            @default(0)
+  minStock        Float?           @default(0)
+  maxStock        Float?
+  organizationId  String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  categoryId      String?
+  category        ProductCategory? @relation(fields: [categoryId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  movements       StockMovement[]
+
+  @@unique([sku, organizationId])
+}
+
+model StockMovement {
+  id             String       @id @default(uuid())
+  productId      String
+  type           MovementType
+  quantity       Float
+  reference      String?
+  reason         String?
+  userId         String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  supplierId     String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+  supplier       Supplier?    @relation(fields: [supplierId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+}
+
+model ProductCategory {
+  id             String       @id @default(uuid())
+  name           String
+  description    String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       Product[]
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([name, organizationId])
+}
+
+model Supplier {
+  id             String          @id @default(uuid())
+  name           String
+  nif            String?
+  email          String?
+  phone          String?
+  address        String?
+  isActive       Boolean         @default(true)
+  organizationId String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  stockMovements StockMovement[]
+  payables       Payable[]
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+
+  @@unique([nif, organizationId])
+}
+
+model InvoiceSeries {
+  id             String       @id @default(uuid())
+  prefix         String
+  year           Int
+  nextSequence   Int          @default(1)
+  isActive       Boolean      @default(true)
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  creditNotes    CreditNote[]
+  invoices       Invoice[]
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  proformas      Proforma[]
+  receipts       Receipt[]
+
+  @@unique([prefix, year, organizationId])
+}
+
+model Customer {
+  id             String       @id @default(uuid())
+  name           String
+  nif            String?
+  email          String?
+  phone          String?
+  address        String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  category       String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invoices       Invoice[]
+  proformas      Proforma[]
+  receivables    Receivable[]
+
+  @@unique([nif, organizationId])
+}
+
+model Service {
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  price          Float          @default(0)
+  taxRate        Float          @default(14)
+  isActive       Boolean        @default(true)
+  organizationId String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  category       String?
+  invoiceItems   InvoiceItem[]
+  proformaItems  ProformaItem[]
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+
+  @@unique([name, organizationId])
+}
+
+model TaxRule {
+  id             String       @id @default(uuid())
+  name           String
+  kind           TaxRuleKind  @default(TAX)
+  scope          TaxRuleScope @default(GLOBAL)
+  targetValue    String?
+  rate           Float        @default(0)
+  priority       Int          @default(100)
+  isActive       Boolean      @default(true)
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, isActive, priority])
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  number          String?
+  status          InvoiceStatus @default(DRAFT)
+  date            DateTime      @default(now())
+  customerName    String
+  customerNif     String?
+  customerAddress String?
+  subtotal        Float         @default(0)
+  discountTotal   Float         @default(0)
+  taxTotal        Float         @default(0)
+  total           Float         @default(0)
+  currency        String        @default("AOA")
+  notes           String?
+  cancelReason    String?
+  organizationId  String
+  seriesId        String
+  userId          String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  customerId      String?
+  amountPaid      Float         @default(0)
+  dueDate         DateTime?
+  paymentStatus   PaymentStatus @default(PENDENTE)
+  overdueAlertedAt DateTime?
+  creditNotes     CreditNote[]
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  series          InvoiceSeries @relation(fields: [seriesId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+  items           InvoiceItem[]
+  proformas       Proforma[]
+  receipts        Receipt[]
+}
+
+model InvoiceItem {
+  id           String   @id @default(uuid())
+  invoiceId    String
+  productId    String?
+  description  String
+  quantity     Float
+  unitPrice    Float
+  taxRate      Float    @default(0)
+  discount     Float    @default(0)
+  subtotal     Float
+  taxAmount    Float
+  total        Float
+  createdAt    DateTime @default(now())
+  serviceId    String?
+  updatedAt    DateTime @updatedAt
+  baseTaxRate  Float    @default(0)
+  taxBreakdown Json?
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  service      Service? @relation(fields: [serviceId], references: [id])
+}
+
+model Proforma {
+  id              String         @id @default(uuid())
+  number          String?
+  status          String         @default("DRAFT")
+  date            DateTime       @default(now())
+  expiryDate      DateTime?
+  customerId      String?
+  customerName    String
+  customerNif     String?
+  customerAddress String?
+  invoiceId       String?
+  subtotal        Float          @default(0)
+  discountTotal   Float          @default(0)
+  taxTotal        Float          @default(0)
+  total           Float          @default(0)
+  currency        String         @default("AOA")
+  notes           String?
+  organizationId  String
+  seriesId        String
+  userId          String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  customer        Customer?      @relation(fields: [customerId], references: [id])
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id])
+  organization    Organization   @relation(fields: [organizationId], references: [id])
+  series          InvoiceSeries  @relation(fields: [seriesId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  items           ProformaItem[]
+}
+
+model ProformaItem {
+  id           String   @id @default(uuid())
+  proformaId   String
+  serviceId    String?
+  description  String
+  quantity     Float
+  unitPrice    Float
+  taxRate      Float    @default(0)
+  discount     Float    @default(0)
+  taxBreakdown Json?
+  subtotal     Float
+  taxAmount    Float
+  total        Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  proforma     Proforma @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  service      Service? @relation(fields: [serviceId], references: [id])
+}
+
+model CreditNote {
+  id             String           @id @default(uuid())
+  number         String?
+  status         String           @default("DRAFT")
+  date           DateTime         @default(now())
+  invoiceId      String
+  creditType     String           @default("PARTIAL")
+  amount         Float
+  reason         String?
+  organizationId String
+  seriesId       String
+  userId         String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  invoice        Invoice          @relation(fields: [invoiceId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  series         InvoiceSeries    @relation(fields: [seriesId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
+  items          CreditNoteItem[]
+}
+
+model CreditNoteItem {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  description  String
+  quantity     Float
+  unitPrice    Float
+  discount     Float      @default(0)
+  subtotal     Float
+  taxAmount    Float
+  total        Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+}
+
+model Receipt {
+  id             String        @id @default(uuid())
+  number         String?
+  status         String        @default("DRAFT")
+  date           DateTime      @default(now())
+  invoiceId      String
+  amount         Float
+  paymentMethod  String?
+  reference      String?
+  notes          String?
+  organizationId String
+  seriesId       String
+  userId         String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  series         InvoiceSeries @relation(fields: [seriesId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+}
+
+model FinancialAccount {
+  id             String              @id @default(uuid())
+  name           String
+  type           AccountType
+  currency       String              @default("AOA")
+  currentBalance Float               @default(0)
+  allowNegative  Boolean             @default(false)
+  isActive       Boolean             @default(true)
+  organizationId String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  criticalBalanceAlertedAt DateTime?
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  movements      FinancialMovement[]
+  bankStatements BankStatement[]
+  cashSessions   CashSession[]
+}
+
+model CashSession {
+  id                     String            @id @default(uuid())
+  organizationId         String
+  financialAccountId     String
+  openedById             String
+  closedById             String?
+  openingBalance         Float
+  expectedClosingBalance Float?
+  actualClosingBalance   Float?
+  difference             Float?
+  status                 CashSessionStatus @default(OPEN)
+  notes                  String?
+  openedAt               DateTime          @default(now())
+  closedAt               DateTime?
+  organization           Organization      @relation(fields: [organizationId], references: [id])
+  financialAccount       FinancialAccount  @relation(fields: [financialAccountId], references: [id])
+  openedBy               User              @relation("CashSessionOpenedBy", fields: [openedById], references: [id])
+  closedBy               User?             @relation("CashSessionClosedBy", fields: [closedById], references: [id])
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model FinancialCategory {
+  id             String                @id @default(uuid())
+  name           String
+  type           FinancialMovementType
+  isActive       Boolean               @default(true)
+  organizationId String
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  movements      FinancialMovement[]
+  payables       Payable[]
+  receivables    Receivable[]
+
+  @@unique([name, organizationId, type])
+}
+
+model FinancialMovement {
+  id             String                @id @default(uuid())
+  accountId      String
+  type           FinancialMovementType
+  amount         Float
+  date           DateTime              @default(now())
+  description    String
+  reference      String?
+  categoryId     String?
+  transferId     String?
+  userId         String
+  organizationId String
+  createdAt      DateTime              @default(now())
+  isReconciled   Boolean               @default(false)
+  bankStatementLineId String?          @unique
+  costCenterId   String?
+  currency       String                @default("AOA")
+  exchangeRateId String?
+  originalAmount Float?
+  
+  account        FinancialAccount      @relation(fields: [accountId], references: [id])
+  category       FinancialCategory?    @relation(fields: [categoryId], references: [id])
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  user           User                  @relation(fields: [userId], references: [id])
+  bankStatementLine BankStatementLine? @relation(fields: [bankStatementLineId], references: [id])
+  costCenter     CostCenter?           @relation(fields: [costCenterId], references: [id])
+  exchangeRate   ExchangeRate?         @relation(fields: [exchangeRateId], references: [id])
+}
+
+model BankStatement {
+  id             String              @id @default(uuid())
+  accountId      String
+  organizationId String
+  fileName       String
+  startDate      DateTime
+  endDate        DateTime
+  startingBalance Float
+  endingBalance  Float
+  status         StatementStatus     @default(PENDING)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  account        FinancialAccount    @relation(fields: [accountId], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  lines          BankStatementLine[]
+}
+
+model BankStatementLine {
+  id              String             @id @default(uuid())
+  statementId     String
+  date            DateTime
+  description     String
+  amount          Float
+  type            FinancialMovementType
+  reference       String?
+  isReconciled    Boolean            @default(false)
+  statement       BankStatement      @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  movement        FinancialMovement?
+}
+
+model CostCenter {
+  id             String              @id @default(uuid())
+  name           String
+  code           String?
+  description    String?
+  isActive       Boolean             @default(true)
+  organizationId String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  movements      FinancialMovement[]
+  payables       Payable[]
+  receivables    Receivable[]
+
+  @@unique([name, organizationId])
+}
+
+model ExchangeRate {
+  id             String              @id @default(uuid())
+  organizationId String
+  baseCurrency   String              @default("AOA")
+  targetCurrency String
+  rate           Float
+  date           DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  movements      FinancialMovement[]
+
+  @@unique([organizationId, targetCurrency, date])
+}
+
+model Payable {
+  id             String              @id @default(uuid())
+  description    String
+  amount         Float
+  dueDate        DateTime
+  status         PaymentStatus       @default(PENDENTE)
+  supplierId     String?
+  organizationId String
+  categoryId     String?
+  costCenterId   String?
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  category       FinancialCategory?  @relation(fields: [categoryId], references: [id])
+  costCenter     CostCenter?         @relation(fields: [costCenterId], references: [id])
+}
+
+model Receivable {
+  id             String              @id @default(uuid())
+  description    String
+  amount         Float
+  dueDate        DateTime
+  status         PaymentStatus       @default(PENDENTE)
+  customerId     String?
+  invoiceId      String?
+  organizationId String
+  categoryId     String?
+  costCenterId   String?
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  customer       Customer?           @relation(fields: [customerId], references: [id])
+  category       FinancialCategory?  @relation(fields: [categoryId], references: [id])
+  costCenter     CostCenter?         @relation(fields: [costCenterId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  TRIAL
+  EXPIRED
+}
+
+enum MovementType {
+  ENTRADA
+  SAIDA
+  AJUSTE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDENTE
+  PAGO
+  PARCIAL
+  VENCIDO
+}
+
+enum TaxRuleKind {
+  TAX
+  RETENTION
+  EXEMPTION
+}
+
+enum TaxRuleScope {
+  GLOBAL
+  CUSTOMER
+  CUSTOMER_CATEGORY
+  SERVICE
+  SERVICE_CATEGORY
+}
+
+enum AccountType {
+  CAIXA
+  BANCO
+}
+
+enum FinancialMovementType {
+  ENTRADA
+  SAIDA
+  TRANSFERENCIA
+}
+
+enum StatementStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+}
+
+model Notification {
+  id             String                 @id @default(uuid())
+  title          String
+  message        String
+  type           NotificationType       @default(INFO)
+  target         NotificationTarget
+  organizationId String?
+  userId         String?
+  createdById    String?
+  createdAt      DateTime               @default(now())
+  organization   Organization?          @relation(fields: [organizationId], references: [id])
+  targetUser     User?                  @relation("NotificationTargetUser", fields: [userId], references: [id])
+  createdBy      User?                  @relation("NotificationCreatedBy", fields: [createdById], references: [id])
+  recipients     NotificationRecipient[]
+}
+
+model NotificationRecipient {
+  id             String       @id @default(uuid())
+  notificationId String
+  userId         String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([notificationId, userId])
+  @@index([userId, readAt])
+}
+
+enum NotificationTarget {
+  ALL
+  ORGANIZATION
+  USER
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  SYSTEM
+}
+
+model AccountingAccount {
+  id             String              @id @default(uuid())
+  code           String
+  name           String
+  class          Int
+  side           AccountSide         @default(ATIVO)
+  isActive       Boolean             @default(true)
+  organizationId String
+  parentId       String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  parent         AccountingAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children       AccountingAccount[] @relation("AccountHierarchy")
+  lines          JournalEntryLine[]
+
+  @@unique([code, organizationId])
+}
+
+model JournalEntry {
+  id              String             @id @default(uuid())
+  number          String?
+  date            DateTime           @default(now())
+  description     String
+  source          JournalEntrySource @default(MANUAL)
+  sourceReference String?
+  reversedById    String?
+  organizationId  String
+  userId          String
+  createdAt       DateTime           @default(now())
+  organization    Organization       @relation(fields: [organizationId], references: [id])
+  user            User               @relation(fields: [userId], references: [id])
+  lines           JournalEntryLine[]
+}
+
+model JournalEntryLine {
+  id          String            @id @default(uuid())
+  entryId     String
+  accountId   String
+  debit       Float             @default(0)
+  credit      Float             @default(0)
+  description String?
+  entry       JournalEntry      @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account     AccountingAccount @relation(fields: [accountId], references: [id])
+}
+
+enum JournalEntrySource {
+  MANUAL
+  AUTOMATIC
+}
+
+enum AccountSide {
+  ATIVO
+  PASSIVO
+  CAPITAL_PROPRIO
+  CUSTO
+  PROVEITO
+}

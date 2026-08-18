@@ -1,0 +1,176 @@
+💰 REGRAS DE NEGÓCIO — MÓDULO DE TESOURARIA (INDEPENDENTE)
+🧠 1. PRINCÍPIO BASE
+A tesouraria é baseada em movimentos financeiros
+O saldo é sempre resultado de:
+
+👉 Entradas - Saídas + Transferências
+
+❌ Nunca alterar saldo diretamente
+✔ Sempre via movimento
+
+💳 2. CONTAS FINANCEIRAS
+📌 Tipos de contas
+CAIXA (dinheiro físico)
+BANCO (conta bancária)
+📌 Estrutura da conta
+nome
+tipo (CAIXA | BANCO)
+moeda
+saldo_atual
+ativa (boolean)
+❗ Regras
+Cada conta pertence a uma organização
+Conta pode ser desativada (não deletar se tiver movimentos)
+Moeda da conta não pode ser alterada após uso
+💸 3. MOVIMENTOS FINANCEIROS
+📌 Tipos
+ENTRADA (dinheiro entra)
+SAÍDA (dinheiro sai)
+TRANSFERÊNCIA (entre contas)
+📌 Estrutura
+conta_id
+tipo
+valor
+data
+categoria_id
+descrição
+referência (opcional)
+criado_por
+❗ Regras gerais
+valor > 0
+tipo define impacto:
+entrada → soma
+saída → subtrai
+deve sempre afetar uma conta
+📥 4. ENTRADAS
+📌 Exemplos
+recebimento
+depósito
+receita
+✅ Regras
+valor obrigatório e positivo
+deve ter categoria (receita)
+atualiza saldo da conta
+📤 5. SAÍDAS
+📌 Exemplos
+pagamento
+despesa
+retirada
+❗ Regras
+valor obrigatório e positivo
+deve ter categoria (despesa)
+🚫 Validação
+if (valor_saida > saldo_atual && !allowNegative) {
+  throw "Saldo insuficiente"
+}
+🔁 6. TRANSFERÊNCIAS
+📌 Definição
+
+Movimento entre duas contas da mesma organização
+
+📌 Estrutura
+conta_origem
+conta_destino
+valor
+❗ Regras
+valor > 0
+contas devem ser diferentes
+mesma moeda (ou exigir conversão futura)
+🔒 Execução (transação)
+BEGIN
+  saída conta_origem
+  entrada conta_destino
+COMMIT
+🚫 Proibido
+transferir para mesma conta
+transferir valor negativo
+🏷️ 7. CATEGORIAS
+📌 Tipos
+RECEITA
+DESPESA
+📌 Estrutura
+nome
+tipo
+ativa
+❗ Regras
+categoria deve corresponder ao tipo do movimento
+entrada → receita
+saída → despesa
+📊 8. SALDO
+📌 Cálculo
+saldo = soma(entradas) - soma(saídas)
+📌 Opção
+armazenar saldo_atual (cache/performance)
+❗ Regras
+saldo nunca deve ser alterado manualmente
+deve sempre refletir movimentos
+📈 9. RELATÓRIOS
+📊 Fluxo de caixa
+entradas vs saídas por período
+📊 Receitas vs despesas
+agrupado por categoria
+📊 Histórico
+por conta
+por data
+por tipo
+📜 10. AUDITORIA
+📌 Registrar:
+criação de conta
+criação de movimento
+transferência
+alteração (se permitido)
+📊 Dados
+usuário
+data/hora
+ação
+valores envolvidos
+❗ Regra crítica
+
+❌ Não apagar movimentos
+✔ Apenas reversão
+
+🔁 11. REVERSÃO DE MOVIMENTOS
+📌 Exemplo
+entrada errada de 100
+
+👉 criar saída de 100
+
+❗ Regras
+manter histórico intacto
+registrar relação entre movimentos
+🧠 12. CONSISTÊNCIA
+🔒 Regras críticas
+todas operações financeiras devem ser atômicas
+evitar inconsistência de saldo
+Exemplo:
+BEGIN TRANSACTION
+  validar saldo
+  criar movimento
+  atualizar saldo
+COMMIT
+🔐 13. PERMISSÕES
+
+Exemplos:
+
+treasury.account.create
+treasury.account.view
+treasury.transaction.create
+treasury.transfer.create
+treasury.report.view
+🚫 14. O QUE NÃO FAZER
+❌ alterar saldo diretamente
+❌ apagar movimentos
+❌ permitir inconsistência entre contas
+❌ misturar lógica com faturação
+💰 15. OUTPUT DO MÓDULO
+
+👉 O módulo gera:
+
+Movimentos financeiros
+Saldos por conta
+Relatórios financeiros
+🧠 RESUMO FINAL
+
+A tesouraria é:
+
+👉 um sistema de controle de fluxo financeiro baseado em movimentos auditáveis

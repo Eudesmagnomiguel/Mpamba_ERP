@@ -1,0 +1,1 @@
+export type { EmailOptions, EmailResult } from "./utils/email.types.js";

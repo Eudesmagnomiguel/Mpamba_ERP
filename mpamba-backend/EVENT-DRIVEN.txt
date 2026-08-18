@@ -1,0 +1,153 @@
+🔗 REGRAS DE NEGÓCIO — FLUXO ENTRE MÓDULOS (EVENT-DRIVEN)
+🧠 1. PRINCÍPIO BASE
+Cada módulo é independente
+Nenhum módulo chama outro diretamente
+A comunicação é feita apenas por:
+
+👉 EVENTOS DO SISTEMA (Event Bus)
+
+📌 Regra central
+
+❌ Proibido:
+
+Faturação chamar Tesouraria diretamente
+Stock ser atualizado dentro da Faturação
+
+✔ Obrigatório:
+
+Faturação emite evento
+Outros módulos reagem ao evento
+🧾 2. CENÁRIO — SÓ FATURAÇÃO (ISOLADO)
+🔁 Fluxo
+Criar fatura (DRAFT)
+Emitir fatura
+Gerar PDF
+Fim
+📌 Regra
+Nenhum evento externo é processado
+Nenhuma integração é ativada
+Sistema funciona como “document generator”
+🧾💰 3. FATURAÇÃO + TESOURARIA
+🔁 Fluxo
+Criar fatura
+Emitir fatura
+📡 Evento disparado
+invoice.issued
+⚙️ Reação da Tesouraria
+
+Quando recebe invoice.issued:
+
+✔ Criar movimento financeiro automático
+✔ Criar “conta a receber” implícita (entrada futura)
+✔ Associar à fatura
+
+📌 Regra de negócio
+Faturação NÃO sabe o que Tesouraria faz
+Tesouraria decide como interpretar o evento
+🔒 Condição
+Só faturas ISSUED geram evento
+Cancelamento não gera impacto financeiro positivo
+🧾📦 4. FATURAÇÃO + STOCK
+🔁 Fluxo
+Criar fatura
+Emitir fatura
+📡 Evento disparado
+invoice.issued
+⚙️ Reação do Stock
+
+Quando recebe invoice.issued:
+
+✔ Identifica itens da fatura
+✔ Reduz quantidade de cada produto
+✔ Regista movimento de saída
+
+📌 Regra de negócio
+Apenas produtos existentes no stock são afetados
+Cada item da fatura gera um movimento de stock
+🚫 Validação
+Se stock insuficiente → pode:
+bloquear emissão (modo rígido)
+ou permitir negativo (modo flexível)
+🧾💰📦 5. TODOS OS MÓDULOS (FULL INTEGRATION)
+🔁 Fluxo completo
+Criar fatura
+Emitir fatura
+📡 Evento principal
+invoice.issued
+⚙️ Reações simultâneas
+💰 Tesouraria:
+cria movimento financeiro
+regista valor a receber
+📦 Stock:
+baixa produtos
+regista saída de stock
+📌 Regra de negócio
+Um único evento → múltiplos efeitos independentes
+Cada módulo processa apenas o que lhe compete
+🧠 6. REGRAS DE ORDEM E CONSISTÊNCIA
+🔒 Ordem de execução NÃO é garantida globalmente
+
+Cada módulo:
+
+processa eventos de forma independente
+pode ter retry
+não depende de outro módulo
+📌 Regra crítica
+
+✔ Eventual consistency (consistência eventual)
+❌ Não usar transações entre módulos
+
+⚠️ 7. REGRAS DE SEGURANÇA
+📌 Idempotência
+
+Cada módulo deve garantir:
+
+if (evento já processado) {
+  ignorar
+}
+📌 Evitar duplicação
+invoice.issued não pode ser processado duas vezes no mesmo módulo
+🔁 8. EVENTOS PADRÃO DO SISTEMA
+🧾 Faturação
+invoice.created
+invoice.issued
+invoice.cancelled
+💰 Tesouraria
+transaction.created
+transfer.completed
+📦 Stock
+stock.decreased
+stock.increased
+🧩 9. PRINCÍPIO DE ISOLAMENTO
+📌 Regra de ouro
+
+Cada módulo deve:
+
+✔ funcionar sozinho
+✔ continuar funcional sem integração
+✔ apenas “reagir” a eventos
+
+🚫 10. O QUE NÃO FAZER
+
+❌ Faturação chamar StockService
+❌ Stock chamar Tesouraria diretamente
+❌ criar dependência circular entre módulos
+❌ partilhar lógica de negócio entre módulos
+
+🧠 RESUMO FINAL
+
+O sistema funciona assim:
+
+👉 Faturação gera evento
+👉 Event bus distribui
+👉 Cada módulo reage sozinho
+👉 Nenhum módulo conhece o outro
+
+🔥 RESULTADO
+
+Você tem:
+
+arquitetura desacoplada (nível SaaS real)
+escalabilidade horizontal
+fácil adicionar novos módulos
+integração limpa via eventos

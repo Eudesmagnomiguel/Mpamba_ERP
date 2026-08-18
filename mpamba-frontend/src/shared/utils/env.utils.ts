@@ -1,0 +1,11 @@
+
+
+const ENV = {
+	API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+	COMPANY_BANK_NAME: process.env.NEXT_PUBLIC_COMPANY_BANK_NAME || '[PREENCHER: Nome do Banco]',
+	COMPANY_BANK_HOLDER: process.env.NEXT_PUBLIC_COMPANY_BANK_HOLDER || '[PREENCHER: Titular da Conta]',
+	COMPANY_BANK_IBAN: process.env.NEXT_PUBLIC_COMPANY_BANK_IBAN || '[PREENCHER: IBAN/Número de Conta]',
+}
+
+
+export default ENV;

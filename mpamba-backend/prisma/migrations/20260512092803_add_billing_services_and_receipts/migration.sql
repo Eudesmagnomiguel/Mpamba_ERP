@@ -1,0 +1,1 @@
+-- Placeholder migration file restored to unblock Prisma migration workflow.

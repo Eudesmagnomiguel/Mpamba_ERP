@@ -1,0 +1,40 @@
+ESTRATÉGIA DE REDESIGN: GESTÃO DE ASSINATURAS E MÓDULOS (SAAS MPAMBA)
+
+1. ESTADO ATUAL (Manual e Fragmentado)
+---------------------------------------
+* Gestão por Silos: Cada módulo (Billing, Stock, Treasury) é tratado como uma unidade isolada. Atualmente, as configurações de assinatura estão escondidas dentro das definições de cada módulo.
+* Fluxo Super Admin: Apenas o Super Admin tem poder de decisão sobre o que uma organização pode usar. O cliente final não tem visibilidade do que "poderia" ter.
+* Dados Desconectados: Os módulos não partilham informações de forma nativa. O Billing não sabe o que o Stock tem, e o Treasury não sabe o que o Billing faturou.
+
+2. O MODELO SAAS MPAMBA (Self-Service + Integração)
+----------------------------------------------------
+* Centro de Comando Único: Substituir as abas de "Assinatura" dentro de cada módulo por um hub central em "Configurações Globais".
+* Catálogo de Módulos (Marketplace):
+    - O cliente vê todos os módulos (Faturação, Inventário, Tesouraria, RH, CRM).
+    - Módulos Ativos: Botão "Configurar".
+    - Módulos Inativos: Botão "Solicitar Acesso".
+* Pedidos Pendentes (Sem Gateway):
+    - Ao solicitar um módulo ou novo plano, o sistema gera um registro de "Request".
+    - O Super Admin recebe um alerta na sua dashboard.
+    - A ativação é feita pelo Super Admin, mas o gatilho parte da necessidade do cliente.
+
+3. FILOSOFIA CORE: O MPAMBA COMO ERP MODULAR INTEGRADO
+------------------------------------------------------
+O Mpamba não é uma coleção de ferramentas isoladas, mas sim um ecossistema integrado por desenho. A arquitetura centralizada permite que:
+* Shared Data Access:
+    - Faturação (Billing) -> Lê "Products" do Inventário (Stock).
+    - Tesouraria (Treasury) -> Recebe "Payments" da Faturação.
+    - Inventário (Stock) -> Cria "Movimentos de Saída" automaticamente ao emitir uma Fatura.
+* Ativação Progressiva:
+    - Se o cliente assina Stock + Billing, o sistema desbloqueia automações que "colam" os dois módulos.
+
+4. COMO DEVE SER A TELA DE CONFIGURAÇÃO (UX/UI)
+-----------------------------------------------
+* Header: Mostra o Plano Atual e a Data de Próxima Renovação.
+* Grid de Módulos: Cards visuais para cada módulo com descrição dos benefícios de integração.
+* Botão "Atualizar Plano": Abre um modal com comparação entre planos.
+* Botão "Solicitar Módulo": Abre um formulário simples que envia o pedido ao Super Admin.
+
+5. CONCLUSÃO
+-------------
+A evolução do Hub de Assinatura materializa a natureza modular do Mpamba. Ao permitir que o cliente solicite novos módulos, estamos a dar-lhe o poder de expandir o seu ecossistema digital, transformando a subscrição na "ponte" que une todas as ferramentas de gestão da empresa.

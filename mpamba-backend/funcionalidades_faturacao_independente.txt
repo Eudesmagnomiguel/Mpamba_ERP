@@ -1,0 +1,48 @@
+🚀 FUNCIONALIDADES DO MÓDULO DE FATURAÇÃO (MODO INDEPENDENTE)
+
+Este documento descreve as capacidades do módulo de Faturação do Mpamba quando operado de forma isolada (sem integração com o módulo de Stock ou Tesouraria).
+
+1. GESTÃO DE CLIENTES (CRM BÁSICO)
+   - Cadastro completo de clientes (Nome, NIF, Email, Telefone, Endereço).
+   - Listagem e pesquisa rápida de clientes.
+   - Histórico de documentos associados ao cliente.
+
+2. CONFIGURAÇÃO DE SÉRIES DE FATURAÇÃO
+   - Criação de séries personalizadas (ex: FT, FR, VD).
+   - Controle de numeração sequencial por ano.
+   - Ativação/Desativação de séries para conformidade fiscal.
+
+3. EMISSÃO DE DOCUMENTOS FISCAIS (Livre Entrada)
+   - Criação de faturas sem necessidade de catálogo prévio (entrada manual de descrição).
+   - Suporte a múltiplos itens por documento.
+   - Definição manual de Preço Unitário, Quantidade e Taxas.
+
+4. MOTOR DE CÁLCULO FINANCEIRO
+   - Cálculos automáticos de Subtotal.
+   - Gestão de Impostos (IVA 14% padrão ou customizado).
+   - Aplicação de descontos por item ou globais.
+   - Cálculo de Total Final em tempo real no frontend e validação no backend.
+
+5. CICLO DE VIDA DO DOCUMENTO
+   - Rascunhos (DRAFT): Criação e edição flexível antes da finalização.
+   - Emissão (ISSUED): Geração de número oficial imutável e assinatura digital simbólica.
+   - Cancelamento (CANCELLED): Anulação de documentos com registro de motivo obrigatório.
+
+6. GESTÃO MULTI-MOEDA
+   - Faturação em Kwanzas (AOA) por padrão.
+   - Suporte a moedas estrangeiras (USD, EUR) para fins informativos ou transacionais.
+
+7. ARQUIVO DIGITAL E PDF
+   - Listagem centralizada de todas as faturas emitidas.
+   - Filtros por estado (Rascunho, Emitido, Cancelado) e data.
+   - Geração e download de PDF oficial para envio ao cliente.
+
+8. INDEPENDÊNCIA DE STOCK
+   - Funcionamento 100% operacional para prestadores de serviços.
+   - Possibilidade de faturar produtos não inventariados.
+   - Interface adaptativa que oculta campos de stock quando o módulo não está presente.
+
+9. SEGURANÇA E AUDITORIA
+   - Controle de acesso baseado em papéis (Faturista, Administrador, Supervisor).
+   - Registro de quem criou, emitiu ou cancelou cada documento.
+   - Imutabilidade de dados fiscais após a emissão.

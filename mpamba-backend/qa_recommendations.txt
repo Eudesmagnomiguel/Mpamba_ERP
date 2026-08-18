@@ -1,0 +1,49 @@
+# Plano de Estratégia de QA - Mpamba Backend
+Engenheiro Responsável: Antigravity QA
+
+Com base na arquitetura atual do backend (Prisma, Express, TypeScript, EventBus), aqui estão as recomendações estratégicas para elevar a qualidade do software e garantir a estabilidade do sistema de faturação e gestão.
+
+## 1. Testes de Unidade (Unit Testing)
+Focar na lógica pura de negócio, isolada de banco de dados ou rede.
+- **Cálculos Fiscais**: Testar a `BaseBillingService` para garantir que o cálculo de subtotal, descontos, retenção na fonte e IVA (TaxRules) está correto para diferentes cenários.
+- **DTO Validation**: Garantir que os schemas do Zod bloqueiam dados inválidos antes de chegarem aos serviços.
+- **Filtros e Paginação**: Validar a lógica de construção de queries dinâmicas.
+
+## 2. Testes de Integração (Integration Testing)
+Onde mora o maior risco após a nossa refatoração modular.
+- **EventBus Flow**: Garantir que ao emitir uma fatura (`INVOICE_ISSUED`), o `IntegrationService` realmente dispara a redução de stock e a entrada na tesouraria.
+- **Fluxos Multi-módulo**: 
+    - Criar Fatura -> Verificar Stock -> Verificar Tesouraria.
+    - Cancelar Fatura -> Verificar Estorno de Stock/Tesouraria.
+- **Prisma Transactions**: Validar que em caso de erro no meio de uma operação complexa, o banco de dados faz o rollback corretamente.
+
+## 3. Testes de Concorrência (Pessimistic Locking)
+Um dos pontos críticos do sistema é a geração de números de documentos.
+- **Race Conditions**: Simular 50 requisições simultâneas de criação de fatura para a mesma organização e validar que:
+    - Não existem números duplicados.
+    - Não existem saltos na numeração (se for o requisito).
+    - O banco de dados lida bem com o `SELECT FOR UPDATE`.
+
+## 4. Testes de Segurança e Multi-tenancy
+Garantir que os dados de uma empresa nunca vazem para outra.
+- **Isolamento de Org**: Tentar acessar/editar uma fatura da Org A usando o token de um usuário da Org B (deve retornar 403/404).
+- **RBAC (Role-Based Access Control)**: Validar se um usuário com permissão de "Visualizar" não consegue "Eliminar" ou "Editar" registros.
+- **Subscription Guard**: Garantir que se o módulo 'Stock' estiver desativado no plano da empresa, as rotas `/stock` retornem erro.
+
+## 5. Testes de Contrato (API/Contract Testing)
+Garantir que o Frontend não quebre.
+- **Swagger Validation**: Automatizar a validação de que os campos retornados pela API batem exatamente com o que está documentado no Swagger.
+- **Error Consistency**: Garantir que todos os erros seguem o mesmo formato JSON (ex: `{ message, errors }`).
+
+## 6. Testes de Performance
+- **Geração de PDF**: Medir o tempo e consumo de memória ao gerar PDFs de faturas com centenas de itens.
+- **Queries Pesadas**: Testar o dashboard de estatísticas com milhares de registros de vendas para identificar necessidade de índices no Prisma.
+
+## Ferramentas Recomendadas:
+- **Jest / Vitest**: Para testes de unidade e integração.
+- **Supertest**: Para testar as rotas HTTP do Express.
+- **Artillery**: Para testes de carga e concorrência.
+- **Prisma Mock**: Para isolar o banco de dados em testes de unidade.
+
+---
+Este plano garante que a evolução do Mpamba seja sustentável e segura.

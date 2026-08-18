@@ -1,0 +1,194 @@
+🧾 REGRAS DE NEGÓCIO — MÓDULO DE FATURAÇÃO (INDEPENDENTE)
+🧠 1. PRINCÍPIO BASE
+A fatura é um documento fiscal imutável após emissão
+Antes da emissão → estado rascunho
+Após emissão → não editável
+
+👉 Qualquer correção = cancelamento ou novo documento
+
+🔄 2. ESTADOS DA FATURA
+📌 Estados permitidos:
+DRAFT (rascunho)
+ISSUED (emitida)
+CANCELLED (cancelada)
+🔒 Regras
+Apenas DRAFT pode ser editada
+Apenas ISSUED pode ser cancelada
+CANCELLED é estado final
+🧾 3. CRIAÇÃO DE FATURA
+✅ Requisitos mínimos
+organização
+pelo menos 1 item
+📌 Dados obrigatórios
+data da fatura
+moeda (se aplicável)
+👤 Dados do cliente
+nome (obrigatório)
+NIF (opcional mas recomendado)
+endereço (opcional)
+
+👉 Dados ficam “congelados” na fatura (snapshot)
+
+📦 4. ITENS DA FATURA
+📌 Estrutura
+
+Cada item deve ter:
+
+descrição
+quantidade
+preço unitário
+taxa de imposto (%)
+desconto (opcional)
+❗ Regras
+quantidade > 0
+preço ≥ 0
+imposto ≥ 0
+desconto ≥ 0
+🧮 Cálculo por item
+subtotal_item = quantidade * preço
+valor_desconto = desconto
+base_imposto = subtotal_item - valor_desconto
+valor_imposto = base_imposto * taxa
+total_item = base_imposto + valor_imposto
+🧮 5. CÁLCULO DA FATURA
+📊 Totais
+subtotal = soma(subtotal_item)
+desconto_total = soma(descontos)
+imposto_total = soma(valor_imposto)
+total = subtotal - desconto_total + imposto_total
+❗ Regras
+cálculo deve ser automático
+backend é a fonte da verdade (não confiar só no frontend)
+🔢 6. NUMERAÇÃO DE FATURAS
+📌 Estrutura
+baseada em séries
+formato: PREFIXO-ANO-SEQUÊNCIA
+
+Ex:
+
+FT-2026-000123
+❗ Regras críticas
+número gerado apenas na emissão
+sequência deve ser:
+única
+incremental
+sem duplicação
+🔒 Concorrência
+LOCK série
+  gerar próximo número
+UNLOCK
+
+👉 evita duplicação
+
+🧾 7. EMISSÃO DA FATURA
+📌 Ação
+
+Transforma DRAFT → ISSUED
+
+✅ Validações
+deve ter itens
+dados obrigatórios preenchidos
+cálculo válido
+🔒 Efeitos
+gera número oficial
+bloqueia edição
+registra auditoria
+❗ Regra crítica
+
+❌ Não pode emitir duas vezes
+❌ Não pode alterar após emissão
+
+📄 8. DOCUMENTO (PDF)
+📌 Deve conter:
+dados da empresa
+dados do cliente
+número da fatura
+data
+itens
+totais
+impostos
+❗ Regras
+PDF deve refletir exatamente os dados da fatura
+não pode ser regenerado com dados diferentes
+📤 9. ENVIO DE FATURA
+📌 Ações
+enviar por email
+reenviar
+📊 Status
+NOT_SENT
+SENT
+❗ Regras
+envio não altera a fatura
+falha de envio não invalida a fatura
+❌ 10. CANCELAMENTO
+📌 Condição
+apenas faturas ISSUED
+📌 Requisitos
+motivo obrigatório
+🔒 Efeitos
+estado → CANCELLED
+mantém número
+registra log
+❗ Regra crítica
+
+❌ Não apagar fatura
+❌ Não reutilizar número
+
+📜 11. AUDITORIA
+📌 Registrar:
+criação
+edição
+emissão
+cancelamento
+envio
+📊 Dados
+usuário
+data/hora
+ação
+dados relevantes
+🔁 12. DUPLICAÇÃO DE FATURA
+📌 Ação
+
+Criar nova fatura baseada em outra
+
+❗ Regras
+nova fatura começa como DRAFT
+não copia número
+pode editar antes de emitir
+🧠 13. CONSISTÊNCIA
+🔒 Transação na emissão
+BEGIN
+  validar
+  gerar número
+  atualizar estado
+COMMIT
+❗ Regras críticas
+evitar emissão duplicada
+garantir integridade dos totais
+🔐 14. PERMISSÕES
+
+Exemplos:
+
+invoice.create
+invoice.update
+invoice.issue
+invoice.cancel
+invoice.view
+invoice.send
+🚫 15. O QUE NÃO FAZER
+❌ editar fatura emitida
+❌ apagar fatura
+❌ gerar número antes da emissão
+❌ confiar só no frontend para cálculos
+🧾 16. OUTPUT DO MÓDULO
+
+👉 O módulo gera:
+
+Faturas emitidas (documentos legais)
+PDFs
+Histórico auditável
+🧠 RESUMO FINAL
+
+O módulo de faturação é:
+
+👉 um sistema de geração de documentos imutáveis com numeração controlada

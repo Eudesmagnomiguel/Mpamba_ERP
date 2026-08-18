@@ -1,0 +1,158 @@
+💳 🧠 COMO FUNCIONA A SUBSCRIÇÃO NO TEU SISTEMA
+🧠 1. PRINCÍPIO BASE
+
+A subscrição não pertence a nenhum módulo (faturação, stock, tesouraria).
+
+👉 Ela é um módulo transversal de controlo de acesso
+
+📌 Regra central
+A subscrição controla:
+quais módulos a organização pode usar
+limites de uso
+estado da conta (ativa, suspensa, expirada)
+🏢 2. ENTIDADE CENTRAL: ORGANIZAÇÃO
+
+Tudo gira em torno de:
+
+👉 Organization
+
+Cada organização tem:
+
+plano ativo
+módulos desbloqueados
+estado de subscrição
+📦 3. PLANOS (SUBSCRIPTION PLANS)
+Exemplo:
+Starter → só Faturação
+Business → Faturação + Tesouraria
+Enterprise → tudo (Faturação + Stock + Tesouraria)
+📌 Estrutura
+nome
+preço
+módulos incluídos
+limites (opcional)
+🔐 4. SUBSCRIÇÃO DA ORGANIZAÇÃO
+📌 Estrutura
+organization_id
+plan_id
+status:
+ACTIVE
+PAST_DUE
+SUSPENDED
+CANCELLED
+start_date
+end_date
+auto_renew
+📌 Regra
+
+👉 A subscrição define o que a organização pode usar
+
+🧩 5. CONTROLO DE MÓDULOS
+
+Cada organização tem:
+
+organization_modules
+📌 Exemplo
+Módulo	Ativo
+faturação	✔
+stock	❌
+tesouraria	✔
+📌 Regra
+Se módulo não estiver ativo → bloqueia acesso
+Mesmo que exista código → UI e API devem bloquear
+🚪 6. GATE DE ACESSO (MIDDLEWARE)
+
+Antes de qualquer ação:
+
+if (!org.hasActiveSubscription()) {
+  bloquear acesso
+}
+
+if (!org.hasModule("stock")) {
+  return 403
+}
+📌 Regra crítica
+
+👉 Nenhuma ação de módulo pode ignorar subscrição
+
+💰 7. BILLING DA SUBSCRIÇÃO
+Fluxo de pagamento:
+Organização escolhe plano
+Gera subscrição
+Pagamento aprovado
+Ativa acesso
+📡 Eventos
+subscription.created
+subscription.activated
+subscription.expired
+subscription.cancelled
+⛔ 8. BLOQUEIOS AUTOMÁTICOS
+Quando subscrição expira:
+bloqueia criação de faturas
+bloqueia transações
+bloqueia stock movements
+📌 Regra
+leitura pode ser permitida
+escrita é bloqueada
+🔁 9. RELAÇÃO SUBSCRIÇÃO × MÓDULOS
+📌 Regra de ouro
+
+👉 Plano define módulos disponíveis
+👉 Subscrição ativa libera uso
+
+Exemplo:
+Plano Business:
+faturação ✔
+tesouraria ✔
+stock ❌
+
+👉 mesmo com subscrição ativa:
+
+stock continua bloqueado
+🧠 10. PREMISSAS IMPORTANTES
+❌ NÃO FAZER
+ligar subscrição diretamente à faturação
+misturar pagamentos de faturas com subscrição
+usar stock ou tesouraria para controlar acesso
+✔ FAZER
+subscrição separada do domínio financeiro interno
+subscrição apenas controla acesso
+🔗 11. EVENTOS DA SUBSCRIÇÃO
+Quando muda o estado:
+subscription.activated
+subscription.expired
+subscription.upgraded
+Reação do sistema:
+ativa/desativa módulos
+bloqueia/desbloqueia acesso
+ajusta permissões
+🧩 12. ARQUITETURA FINAL
+SUBSCRIÇÃO
+   ↓ controla
+ORGANIZAÇÃO
+   ↓ ativa
+MÓDULOS (Faturação / Stock / Tesouraria)
+   ↓ geram
+EVENTOS INTERNOS
+🚀 13. FLUXO REAL DO UTILIZADOR
+🧑 Cliente novo:
+cria conta
+escolhe plano
+ativa subscrição
+módulos liberados
+começa a usar sistema
+⛔ Se expirar:
+sistema detecta expiração
+bloqueia escrita
+mantém dados
+mostra upgrade screen
+💡 14. IDEIA IMPORTANTE (nível SaaS real)
+
+👉 Subscrição não controla dados
+👉 Subscrição controla acesso
+
+🔥 RESUMO FINAL
+
+A subscrição é:
+
+👉 um sistema de autorização comercial que controla acesso aos módulos, independente da lógica interna do ERP

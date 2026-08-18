@@ -1,0 +1,167 @@
+📦 REGRAS DE NEGÓCIO — MÓDULO DE STOCK (INDEPENDENTE)
+🧠 1. PRINCÍPIO BASE
+O stock é controlado exclusivamente por movimentos
+A quantidade atual é sempre resultado de:
+
+👉 Entradas - Saídas + Ajustes
+
+❌ Nunca atualizar quantidade diretamente (sem movimento)
+
+📦 2. PRODUTOS
+✅ Criação
+Produto deve ter:
+Nome (obrigatório)
+SKU (único por organização)
+Unidade (ex: un, kg, caixa)
+Preço é opcional (não impacta stock)
+🔒 Regras
+SKU não pode ser duplicado
+Produto não pode ser apagado se tiver movimentos
+Produto pode ser desativado (soft delete)
+📊 3. ESTOQUE
+📌 Estrutura lógica
+
+Cada produto tem:
+
+quantidade_atual
+estoque_minimo (opcional)
+🔄 Cálculo
+quantidade_atual = 
+  soma(entradas) 
+- soma(saídas) 
++ soma(ajustes)
+❗ Regras
+Nunca permitir quantidade negativa (configurável)
+Toda alteração deve gerar um movimento
+🔄 4. MOVIMENTOS DE STOCK
+🎯 Tipos
+ENTRADA
+SAÍDA
+AJUSTE
+🧾 Estrutura do movimento
+produto_id
+tipo
+quantidade
+data
+referência (opcional)
+observação
+criado_por
+⚠️ Regras gerais
+Quantidade deve ser > 0
+Tipo define o impacto:
+entrada → soma
+saída → subtrai
+ajuste → pode ser positivo ou negativo
+📥 5. ENTRADA DE STOCK
+📌 Uso
+Compra
+Reposição
+Correção positiva
+✅ Regras
+Quantidade obrigatória e positiva
+Atualiza quantidade_atual
+🔒 Validação
+Produto deve estar ativo
+📤 6. SAÍDA DE STOCK
+📌 Uso
+Consumo interno
+Venda (quando integrado com faturação)
+Perda
+❗ Regras
+Quantidade obrigatória e positiva
+🚫 Validações
+Não pode exceder quantidade disponível (se controle ativo)
+if (quantidade_saida > quantidade_atual) {
+  throw "Estoque insuficiente"
+}
+⚖️ 7. AJUSTE DE STOCK
+📌 Uso
+Correção manual
+Inventário físico
+🧠 Tipos de ajuste
+Positivo → aumenta
+Negativo → reduz
+❗ Regras
+Deve ter justificativa obrigatória
+Deve registrar auditoria
+⚠️ 8. ALERTAS DE ESTOQUE
+📌 Regra
+if (quantidade_atual <= estoque_minimo) {
+  gerar_alerta("estoque baixo")
+}
+🔔 Comportamento
+Não bloqueia operação
+Apenas notifica
+📈 9. RELATÓRIOS
+📊 Movimentação
+Histórico completo por produto
+Filtros:
+data
+tipo
+usuário
+📊 Produtos mais usados
+Baseado em:
+volume de saídas
+📊 Saldo atual
+Quantidade por produto
+🔐 10. AUDITORIA
+
+Toda ação deve registrar:
+
+usuário
+data/hora
+tipo de ação
+antes/depois (em ajustes)
+❗ Regra crítica
+
+❌ Não permitir edição de movimentos
+✔ Permitir apenas reversão (novo movimento inverso)
+
+🔁 11. REVERSÃO DE MOVIMENTOS
+📌 Exemplo
+Entrada errada de 10 unidades
+
+👉 Reversão:
+
+Criar saída de 10 unidades
+❗ Regra
+Nunca apagar histórico
+Sempre compensar com novo movimento
+🧠 12. CONSISTÊNCIA
+⚠️ Regras críticas
+Operações devem ser atômicas (transação)
+Evitar race conditions
+Exemplo:
+BEGIN TRANSACTION
+  validar estoque
+  criar movimento
+  atualizar quantidade
+COMMIT
+🔒 13. PERMISSÕES
+
+Exemplos:
+
+stock.product.create
+stock.product.update
+stock.movement.create
+stock.adjustment.create
+stock.view
+🚫 14. O QUE NÃO FAZER
+❌ Alterar quantidade diretamente
+❌ Apagar movimentos
+❌ Permitir stock negativo sem controle
+❌ Misturar lógica com faturação
+📦 15. OUTPUT DO MÓDULO
+
+👉 O módulo gera:
+
+Movimentos de stock
+Estado atual de produtos
+Alertas
+🧠 RESUMO FINAL
+
+O módulo de stock é:
+
+👉 um sistema baseado em eventos de movimentação
+
+Não é uma tabela de quantidade — é um histórico que gera o estado atual.
