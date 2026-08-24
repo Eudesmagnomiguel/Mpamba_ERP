@@ -15,14 +15,21 @@ import subscriptionRequestRoutes from './routes/core/subscription-request.routes
 import organizationRoutes from './routes/module/organization.routes.js';
 import dashboardRoutes from './routes/core/dashboard.routes.js';
 import notificationRoutes from './routes/core/notification.routes.js';
+import cronRoutes from './routes/core/cron.routes.js';
 import accountingRoutes from './routes/module/accounting/index.js';
 
 const app = express();
 
+// Atrás do proxy da plataforma de alojamento: sem isto o rate limiter
+// e os logs veem sempre o IP do proxy em vez do IP do cliente.
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// O limite acima do padrão (100 KB) existe para aceitar o logótipo da
+// organização enviado como data URI em /organizations/me/logo.
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Routes
 app.get("/", async (req, res) => {
@@ -74,6 +81,9 @@ apiRouter.use('/dashboard', dashboardRoutes);
 
 // Notification Routes
 apiRouter.use('/notifications', notificationRoutes);
+
+// Cron Routes (tarefas agendadas chamadas externamente)
+apiRouter.use('/cron', cronRoutes);
 
 // Mount API Router
 app.use("/api", apiRouter);

@@ -1,6 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Request } from 'express';
-import rateLimit from 'express-rate-limit';
+import type { Request, RequestHandler, Response } from 'express';
+import rateLimitImport from 'express-rate-limit';
+
+// O express-rate-limit é um pacote dual CJS/ESM: dependendo do modo de resolução
+// de módulos do ambiente, o factory chega como a própria função (ESM) ou como um
+// namespace com .default (CJS). Normalizar aqui mantém o build estável em
+// qualquer ambiente — o typecheck do @vercel/node resolve-o de forma diferente
+// do tsc local, e sem isto o deploy falha com "expression is not callable".
+const rateLimit = ((rateLimitImport as { default?: unknown }).default
+	?? rateLimitImport) as (options?: Record<string, unknown>) => RequestHandler;
 
 // Extrai o IP real do cliente (considerando proxies)
 function getClientIp(req: Request): string {
@@ -42,7 +50,7 @@ export const authRateLimiter = rateLimit({
     // Uma falha nossa (base de dados em baixo → 503) não é tentativa inválida do
     // utilizador. Tratamos 5xx como "bem-sucedido" para que não conte na quota,
     // senão uma indisponibilidade da BD bloqueia o IP por 15 minutos.
-    requestWasSuccessful: (_req, res) => res.statusCode < 400 || res.statusCode >= 500,
+    requestWasSuccessful: (_req: Request, res: Response) => res.statusCode < 400 || res.statusCode >= 500,
     keyGenerator: (req: Request) => getClientIp(req),
 });
 

@@ -26,7 +26,7 @@
 		"esModuleInterop": true,
 		"resolveJsonModule": true
 	},
-	"include": ["src/**/*", "script/**/*", "generated/**/*"],
+	"include": ["src/**/*", "script/**/*", "generated/**/*", "api/**/*"],
 	"exclude": [
 		"prisma.config.ts",
 		"prisma/seed.ts",

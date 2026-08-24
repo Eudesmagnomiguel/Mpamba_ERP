@@ -13,7 +13,15 @@ import { prisma } from '../../config/prisma.config.js';
  * de origem continua a funcionar de forma totalmente independente.
  */
 export class IntegrationService {
+	// Em serverless o init() corre a cada cold start. Sem esta guarda, uma
+	// instância reaproveitada acumularia subscrições e o mesmo evento seria
+	// processado mais de uma vez (ex.: baixar o stock duas vezes pela mesma fatura).
+	private static initialized = false;
+
 	public static init() {
+		if (IntegrationService.initialized) return;
+		IntegrationService.initialized = true;
+
 		console.log('🔗 [Integration] Inicializando integração entre módulos...');
 
 		// ─── FATURAÇÃO → STOCK ────────────────────────────────────────────────────

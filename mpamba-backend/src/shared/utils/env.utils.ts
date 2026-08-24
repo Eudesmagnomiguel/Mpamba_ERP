@@ -35,6 +35,9 @@ const ENV = {
     RATE_LIMIT_WINDOW: parseInt(process.env.RATE_LIMIT_WINDOW || '60'),
     RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '100'),
 
+    // Tarefas agendadas (Vercel Cron)
+    CRON_SECRET: process.env.CRON_SECRET || '',
+
     // Support Contact
     WHATSAPP_NUMBER: process.env.WHATSAPP_NUMBER || '+244952699046',
 

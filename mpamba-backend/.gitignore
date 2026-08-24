@@ -74,3 +74,6 @@ coverage/
 
 # Diversos
 .DS_Store
+
+.vercel
+.env*
