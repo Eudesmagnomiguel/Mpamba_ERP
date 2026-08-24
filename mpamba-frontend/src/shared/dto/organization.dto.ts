@@ -23,6 +23,20 @@ export const UpdateOwnOrganizationSchema = z.object({
 	invoiceFooterNote: z.string().max(1000).optional().or(z.literal("")),
 	invoiceDueDays: z.number().int().min(0).max(365).optional(),
 	posInvoiceThreshold: z.number().min(0).optional(),
+	// Dados de emitente impressos na factura (formato AGT)
+	city: z.string().max(80).optional().or(z.literal("")),
+	postalCode: z.string().max(20).optional().or(z.literal("")),
+	country: z.string().max(60).optional().or(z.literal("")),
+	fax: z.string().max(40).optional().or(z.literal("")),
+	logoUrl: z.string().max(500).optional().or(z.literal("")),
+	bankName: z.string().max(80).optional().or(z.literal("")),
+	bankAccount: z.string().max(60).optional().or(z.literal("")),
+	iban: z.string().max(60).optional().or(z.literal("")),
+	agtValidationNumber: z.string().max(40).optional().or(z.literal("")),
+	taxExemptionCode: z.string().max(10).optional().or(z.literal("")),
+	taxExemptionReason: z.string().max(120).optional().or(z.literal("")),
+	retentionEntity: z.string().max(120).optional().or(z.literal("")),
+	retentionRate: z.number().min(0).max(100).optional(),
 });
 
 export type OrganizationDTO = z.infer<typeof OrganizationSchema>;

@@ -8,6 +8,10 @@ export const invoiceItemSchema = z.object({
 	unitPrice: z.number().min(0, 'Preço não pode ser negativo'),
 	taxRate: z.number().min(0, 'Imposto não pode ser negativo').optional(),
 	discount: z.number().min(0, 'Desconto não pode ser negativo').default(0),
+	// Impressos na linha da factura (formato AGT)
+	unit: z.string().max(10).optional(),
+	taxExemptionCode: z.string().max(10).optional().nullable(),
+	taxExemptionReason: z.string().max(120).optional().nullable(),
 });
 
 export const serviceSchema = z.object({
@@ -70,6 +74,13 @@ export const createInvoiceSchema = z.object({
 	currency: z.string().default('AOA'),
 	notes: z.string().optional().nullable(),
 	dueDate: z.coerce.date().optional(),
+	// Cabeçalho da factura no formato AGT
+	paymentCondition: z.string().max(60).optional().nullable(),
+	requisition: z.string().max(60).optional().nullable(),
+	exchangeRate: z.number().positive().optional().nullable(),
+	// Retenção na fonte; se omitida, herda a parametrização da organização
+	retentionEntity: z.string().max(120).optional().nullable(),
+	retentionRate: z.number().min(0).max(100).optional().nullable(),
 	items: z.array(invoiceItemSchema).min(1, 'Pelo menos um item é obrigatório'),
 });
 

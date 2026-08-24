@@ -33,6 +33,20 @@ export interface Organization {
 	invoiceFooterNote?: string | null;
 	invoiceDueDays?: number;
 	posInvoiceThreshold?: number;
+	// Dados de emitente impressos na factura (formato AGT)
+	city?: string | null;
+	postalCode?: string | null;
+	country?: string | null;
+	fax?: string | null;
+	logoUrl?: string | null;
+	bankName?: string | null;
+	bankAccount?: string | null;
+	iban?: string | null;
+	agtValidationNumber?: string | null;
+	taxExemptionCode?: string | null;
+	taxExemptionReason?: string | null;
+	retentionEntity?: string | null;
+	retentionRate?: number | null;
 	_count?: { users: number };
 	createdAt: string;
 }

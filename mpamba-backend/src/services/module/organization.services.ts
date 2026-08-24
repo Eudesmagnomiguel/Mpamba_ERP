@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma.config.js";
-import type { CreateOrganizationDto, UpdateOrganizationDto } from "../../shared/dto/organization.dto.js";
+import type { CreateOrganizationDto, UpdateOrganizationDto, UpdateOwnOrganizationDto } from "../../shared/dto/organization.dto.js";
 
 export class OrganizationService {
 	async findAll(paginationOptions?: { page?: number; pageSize?: number }) {
@@ -72,7 +72,7 @@ export class OrganizationService {
 		});
 	}
 
-	async update(id: string, data: UpdateOrganizationDto & { invoiceFooterNote?: string; invoiceDueDays?: number; posInvoiceThreshold?: number }) {
+	async update(id: string, data: UpdateOrganizationDto & UpdateOwnOrganizationDto) {
 		return prisma.organization.update({
 			where: { id },
 			data: {
@@ -85,7 +85,21 @@ export class OrganizationService {
 				...(data.isActive !== undefined && { isActive: data.isActive }),
 				...(data.invoiceFooterNote !== undefined && { invoiceFooterNote: data.invoiceFooterNote === '' ? null : data.invoiceFooterNote }),
 				...(data.invoiceDueDays !== undefined && { invoiceDueDays: data.invoiceDueDays }),
-				...(data.posInvoiceThreshold !== undefined && { posInvoiceThreshold: data.posInvoiceThreshold })
+				...(data.posInvoiceThreshold !== undefined && { posInvoiceThreshold: data.posInvoiceThreshold }),
+				// Dados de emitente e parametrização fiscal impressos na factura
+				...(data.city !== undefined && { city: data.city === '' ? null : data.city }),
+				...(data.postalCode !== undefined && { postalCode: data.postalCode === '' ? null : data.postalCode }),
+				...(data.country !== undefined && { country: data.country === '' ? null : data.country }),
+				...(data.fax !== undefined && { fax: data.fax === '' ? null : data.fax }),
+				...(data.logoUrl !== undefined && { logoUrl: data.logoUrl === '' ? null : data.logoUrl }),
+				...(data.bankName !== undefined && { bankName: data.bankName === '' ? null : data.bankName }),
+				...(data.bankAccount !== undefined && { bankAccount: data.bankAccount === '' ? null : data.bankAccount }),
+				...(data.iban !== undefined && { iban: data.iban === '' ? null : data.iban }),
+				...(data.agtValidationNumber !== undefined && { agtValidationNumber: data.agtValidationNumber === '' ? null : data.agtValidationNumber }),
+				...(data.taxExemptionCode !== undefined && { taxExemptionCode: data.taxExemptionCode === '' ? null : data.taxExemptionCode }),
+				...(data.taxExemptionReason !== undefined && { taxExemptionReason: data.taxExemptionReason === '' ? null : data.taxExemptionReason }),
+				...(data.retentionEntity !== undefined && { retentionEntity: data.retentionEntity === '' ? null : data.retentionEntity }),
+				...(data.retentionRate !== undefined && { retentionRate: data.retentionRate })
 			}
 		});
 	}

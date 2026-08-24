@@ -116,6 +116,23 @@ router.put(
 	organizationController.updateMine.bind(organizationController)
 );
 
+/**
+ * @swagger
+ * /organizations/me/logo:
+ *   put:
+ *     tags:
+ *       - Organization
+ *     summary: Define o logótipo impresso na factura
+ *     description: Aceita um URL http(s) ou a imagem em data URI (PNG, JPG, GIF ou WebP, até cerca de 1 MB).
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put(
+	"/me/logo",
+	permissionGuard(PERMISSIONS.SETTING_UPDATE),
+	organizationController.updateMineLogo.bind(organizationController)
+);
+
 router.get("/", organizationController.getAll.bind(organizationController));
 
 /**

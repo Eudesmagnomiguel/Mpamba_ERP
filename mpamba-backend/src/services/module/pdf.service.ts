@@ -8,12 +8,17 @@ export type BillingDocumentType = 'FATURA' | 'PROFORMA' | 'NOTA_CREDITO' | 'RECI
 export type PdfFormat = 'A4' | 'THERMAL';
 
 interface InvoiceItem {
+  code?: string | null;         // código do artigo/serviço (coluna "Artigo")
   description: string;
   quantity: number;
+  unit?: string | null;         // unidade, ex.: "UN"
   unitPrice: number;
   discount: number;
   total: number;
-  vatRate?: number; // IVA %, default 14
+  vatRate?: number;             // IVA %
+  taxRate?: number;             // nome do campo em base de dados
+  taxExemptionCode?: string | null;
+  taxExemptionReason?: string | null;
 }
 
 interface TaxRetention {
@@ -27,15 +32,22 @@ interface Organization {
   name: string;
   nif: string | null;
   address: string | null;
-  city?: string;
-  country?: string;
+  city?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
   phone?: string | null;
-  fax?: string;
-  email?: string;
-  bankName?: string;
-  bankAccount?: string;
-  iban?: string;
-  logoPath?: string;   // path to logo image file
+  fax?: string | null;
+  email?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  iban?: string | null;
+  logoPath?: string | null;    // caminho local para o ficheiro do logótipo
+  logoUrl?: string | null;     // alternativa: caminho/URL guardado na organização
+  agtValidationNumber?: string | null;
+  taxExemptionCode?: string | null;
+  taxExemptionReason?: string | null;
+  retentionEntity?: string | null;
+  retentionRate?: number | null;
 }
 
 export interface BillingDocument {
@@ -65,6 +77,15 @@ export interface BillingDocument {
   total: number;
 
   retentions?: TaxRetention[];
+  requisition?: string | null;
+  postalCode?: string | null;
+  customerPostalCode?: string | null;
+  // Retenção guardada na própria factura (tem precedência sobre a da organização)
+  retentionEntity?: string | null;
+  retentionRate?: number | null;
+  retentionBase?: number | null;
+  retentionValue?: number | null;
+  copyLabel?: string | null;      // "Original" | "Duplicado" | ...
   paymentCondition?: string | null;
   notes?: string | null;
   softwareValidation?: string | null;
@@ -87,6 +108,22 @@ const fmtDate = (d: string | Date | null | undefined) => {
   return new Date(d).toLocaleDateString('pt-AO');
 };
 
+/** Data no formato usado nas facturas fiscais angolanas: 2025-02-09. */
+const fmtIso = (d: string | Date | null | undefined) => {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toISOString().slice(0, 10);
+};
+
+/** Hora do carregamento, como no bloco "Carga" do modelo: 18:37. */
+const fmtTime = (d: string | Date | null | undefined) => {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return '';
+  return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+};
+
 const COLORS = {
   primary:   '#2B4C7E',   // deep blue
   accent:    '#4A90D9',
@@ -100,10 +137,10 @@ const COLORS = {
 };
 
 const DOCUMENT_LABELS: Record<BillingDocumentType, string> = {
-  FATURA: 'FATURA',
-  PROFORMA: 'FATURA PROFORMA',
-  NOTA_CREDITO: 'NOTA DE CRÉDITO',
-  RECIBO: 'RECIBO DE QUITAÇÃO',
+  FATURA: 'Factura',
+  PROFORMA: 'Factura Proforma',
+  NOTA_CREDITO: 'Nota de Crédito',
+  RECIBO: 'Recibo',
 };
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -128,6 +165,49 @@ export class PDFService {
 
   async generateDocumentPDF(docData: BillingDocument, format: PdfFormat = 'A4'): Promise<Buffer> {
     if (format === 'THERMAL') return this.generateThermalDocumentPDF(docData);
+    return this.generateAgtA4PDF(docData);
+  }
+
+  /**
+   * Layout A4 no formato fiscal angolano (AGT), seguindo o modelo de referência
+   * em docs/factura_modelo.pdf: monocromático, emitente à esquerda, destinatário
+   * à direita, grelha de metadados, tabela de linhas, Quadro Resumo de Impostos,
+   * Quadro de Retenção, resumo de totais, blocos Carga/Descarga e coordenadas
+   * bancárias.
+   *
+   * As coordenadas são absolutas para que a folha saia sempre com o mesmo
+   * desenho independentemente do conteúdo, como nos programas de facturação
+   * certificados.
+   */
+  /**
+   * Converte o logótipo guardado na organização em algo que o pdfkit aceite:
+   * um data URI passa a Buffer, um URL http(s) é descarregado com timeout curto
+   * e um caminho local segue como está. Falhar a obter o logótipo nunca impede
+   * a emissão da factura.
+   */
+  private async resolveLogo(org: Organization): Promise<Buffer | string | null> {
+    const source = org.logoPath || org.logoUrl || null;
+    if (!source) return null;
+
+    const dataUri = source.match(/^data:image\/[a-z+]+;base64,(.+)$/i);
+    if (dataUri?.[1]) return Buffer.from(dataUri[1], 'base64');
+
+    if (/^https?:\/\//i.test(source)) {
+      try {
+        const response = await fetch(source, { signal: AbortSignal.timeout(3000) });
+        if (!response.ok) return null;
+        return Buffer.from(await response.arrayBuffer());
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return source;
+  }
+
+  private async generateAgtA4PDF(docData: BillingDocument): Promise<Buffer> {
+    const logo = await this.resolveLogo(docData.organization);
+
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
         margin: 0,
@@ -143,252 +223,448 @@ export class PDFService {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      const W = doc.page.width;
-      const H = doc.page.height;
-      const ML = 40;
-      const MR = W - 40;
+      const org = docData.organization;
+      const isReceipt = docData.type === 'RECIBO';
 
-      // ── 1. Top accent bar ────────────────────────────────────────────────
-      let primaryColor = COLORS.primary;
-      if (docData.type === 'NOTA_CREDITO') primaryColor = COLORS.RED;
-      doc.rect(0, 0, W, 6).fill(primaryColor);
+      // ── Geometria da folha ────────────────────────────────────────────────
+      const ML = 62;            // margem esquerda
+      const MR = 566;           // limite direito do conteúdo
+      const CW = MR - ML;       // largura útil
+      const SUMMARY_X = 393;    // início da coluna de totais
+      const LEFT_BLOCK_R = 368; // limite direito dos quadros da esquerda
 
-      // ── 2. Header ────────────────────────────────────────────────────────
-      let y = 20;
+      // Colunas da tabela de linhas (valores numéricos alinhados à direita)
+      const COL = {
+        code: ML,
+        desc: 157,
+        descW: 180,
+        qtyR: 344,
+        unit: 352,
+        priceR: 440,
+        discR: 474,
+        vatCode: 482,
+        vatR: 518,
+        valueR: MR,
+      };
 
-      if (docData.organization.logoPath) {
-        try {
-          doc.image(docData.organization.logoPath, ML, y, { height: 55 });
-        } catch (_) {}
-      }
+      const ITEMS_TOP = 332;
+      const ITEMS_LIMIT = 478;  // abaixo disto, as linhas passam para nova página
 
-      const companyX = docData.organization.logoPath ? ML + 110 : ML;
-      doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(13)
-        .text(docData.organization.name, companyX, y + 2, { width: 250 });
+      // ── Utilitários de desenho ───────────────────────────────────────────
+      const rule = (y: number, x1 = ML, x2 = MR, w = 0.4, color = COLORS.text) => {
+        doc.moveTo(x1, y).lineTo(x2, y).lineWidth(w).strokeColor(color).stroke();
+      };
 
-      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8);
-      let cy = y + 18;
-      doc.text(`NIF: ${docData.organization.nif || '—'}`, companyX, cy);
-      cy += 11;
-      doc.text(docData.organization.address || '—', companyX, cy);
-      cy += 11;
-      if (docData.organization.city) { doc.text(docData.organization.city, companyX, cy); cy += 11; }
-      if (docData.organization.phone) { doc.text(`Tel: ${docData.organization.phone}`, companyX, cy); cy += 11; }
-      if (docData.organization.email) { doc.text(docData.organization.email, companyX, cy); cy += 11; }
+      const label = (text: string, x: number, y: number, opts: Record<string, unknown> = {}) => {
+        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(7.5).text(text, x, y, opts);
+      };
 
-      // Document Label (right)
-      doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(docData.type === 'RECIBO' ? 20 : 26)
-        .text(DOCUMENT_LABELS[docData.type], MR - 250, y, { width: 250, align: 'right' });
+      const value = (text: string, x: number, y: number, opts: Record<string, unknown> = {}) => {
+        doc.fillColor(COLORS.text).font('Helvetica').fontSize(7.5).text(text, x, y, opts);
+      };
 
-      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
-        .text(docData.number || 'RASCUNHO', MR - 150, y + 30, { width: 150, align: 'right' });
+      const numRight = (text: string, right: number, y: number, width = 90) => {
+        doc.fillColor(COLORS.text).font('Helvetica').fontSize(7.5)
+          .text(text, right - width, y, { width, align: 'right' });
+      };
 
-      if (docData.series) {
-        const seriesText = typeof docData.series === 'object' 
-          ? `${docData.series.prefix}/${docData.series.year}` 
-          : docData.series;
-        doc.text(seriesText, MR - 150, y + 41, { width: 150, align: 'right' });
-      }
+      // ── Dados derivados ──────────────────────────────────────────────────
+      const items = docData.items || [];
+      const rateOf = (it: InvoiceItem) => it.vatRate ?? it.taxRate ?? 0;
 
-      // ── 3. Divider ───────────────────────────────────────────────────────
-      y = 90;
-      doc.rect(ML, y, W - ML * 2, 1).fill(COLORS.border);
-
-      // ── 4. Meta row ──────────────────────────────────────────────
-      y += 8;
-      const metaItems = [
-        { label: 'V/Nº Contrib.', value: docData.customerNif || '—' },
-        { label: 'Moeda',         value: docData.currency },
-        { label: 'Câmbio',        value: docData.exchangeRate ? fmt(docData.exchangeRate) : '—' },
-        { label: 'Data',          value: fmtDate(docData.date) },
-      ];
-
-      const metaW = (W - ML * 2) / metaItems.length;
-      metaItems.forEach((m, i) => {
-        const mx = ML + i * metaW;
-        doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7).text(m.label, mx, y);
-        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(8.5).text(m.value, mx, y + 10);
+      // Agrupamento por taxa de IVA para o Quadro Resumo de Impostos
+      const vatGroups = new Map<number, {
+        incidence: number;
+        total: number;
+        code?: string | null;
+        reason?: string | null;
+      }>();
+      items.forEach((it) => {
+        const r = rateOf(it);
+        const g = vatGroups.get(r)
+          || { incidence: 0, total: 0, code: it.taxExemptionCode, reason: it.taxExemptionReason };
+        g.incidence += it.total;
+        g.total += it.total * (r / 100);
+        if (!g.code) g.code = it.taxExemptionCode;
+        if (!g.reason) g.reason = it.taxExemptionReason;
+        vatGroups.set(r, g);
       });
 
-      y += 30;
-      doc.rect(ML, y, W - ML * 2, 1).fill(COLORS.border);
+      // Retenção na fonte: a guardada na factura tem precedência; caso não
+      // exista, aplica-se a parametrização da organização à base tributável.
+      const retentionRate = docData.retentionRate ?? org.retentionRate ?? null;
+      const retentionEntity = docData.retentionEntity || org.retentionEntity || null;
+      const retentionBase = docData.retentionBase ?? docData.subtotal;
+      const retentionValue = docData.retentionValue
+        ?? (retentionRate ? (retentionBase * retentionRate) / 100 : null);
 
-      y += 8;
-      const metaItems2 = [
-        { label: 'Desconto Comercial', value: fmt(docData.discountTotal || 0) },
-        { label: 'Desconto Adicional', value: '0,00' },
-        { label: docData.type === 'RECIBO' ? 'Forma Pagamento' : 'Vencimento', value: docData.type === 'RECIBO' ? (docData.paymentMethod || '—') : fmtDate(docData.dueDate) },
-        { label: 'Condição Pagamento', value: docData.paymentCondition || '—' },
-      ];
-      metaItems2.forEach((m, i) => {
-        const mx = ML + i * metaW;
-        doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7).text(m.label, mx, y);
-        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(8.5).text(m.value, mx, y + 10);
-      });
+      // ── Paginação das linhas ─────────────────────────────────────────────
+      const rowHeightOf = (it: InvoiceItem) => {
+        const h = doc.font('Helvetica').fontSize(7.5)
+          .heightOfString(it.description || '', { width: COL.descW });
+        return Math.max(13, h + 5);
+      };
 
-      y += 32;
-
-      // ── 5. Customer box ──────────────────────────────────────────────────
-      doc.rect(ML, y, W - ML * 2, 1).fill(COLORS.border);
-      y += 6;
-
-      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7).text('Cliente', ML, y);
-      y += 10;
-
-      doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(9)
-        .text(docData.customerName, ML, y, { width: 320 });
-      y += 12;
-
-      doc.font('Helvetica').fontSize(8).fillColor(COLORS.muted);
-      if (docData.customerNif) { doc.text(`NIF: ${docData.customerNif}`, ML, y); y += 10; }
-      if (docData.customerAddress) { doc.text(docData.customerAddress, ML, y); y += 10; }
-      if (docData.customerCity) { doc.text(docData.customerCity, ML, y); y += 10; }
-      if (docData.customerEmail) { doc.text(docData.customerEmail, ML, y); y += 10; }
-
-      y += 8;
-
-      if (docData.type === 'RECIBO') {
-        // Receipt Specific Body
-        y += 20;
-        doc.rect(ML, y, W - ML * 2, 60).fill(COLORS.rowAlt);
-        doc.fillColor(COLORS.text).font('Helvetica').fontSize(10);
-        doc.text(
-          `Recebemos de ${docData.customerName} a quantia de ${fmt(docData.total)} ${docData.currency} (${numberToWords(docData.total)}), referente à liquidação total/parcial da Fatura ${docData.invoiceNumber || '—'}.`,
-          ML + 10, y + 15, { width: W - ML * 2 - 20, lineGap: 5 }
-        );
-        y += 80;
+      const pages: InvoiceItem[][] = [];
+      if (isReceipt || items.length === 0) {
+        pages.push([]);
       } else {
-        // Items table (for Invoice, Proforma, Credit Note)
-        const COL = { artigo: ML, desc: ML + 45, qty: ML + 290, unit: ML + 330, disc: ML + 390, iva: ML + 430, total: ML + 460 };
-        const tableRight = MR;
-
-        doc.rect(ML, y, W - ML * 2, 18).fill(primaryColor);
-        doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(7.5);
-        doc.text('Artigo', COL.artigo, y + 5);
-        doc.text('Descrição', COL.desc, y + 5);
-        doc.text('Qtd.', COL.qty, y + 5, { width: 38, align: 'right' });
-        doc.text('Pr. Unit.', COL.unit, y + 5, { width: 58, align: 'right' });
-        doc.text('Desc.', COL.disc, y + 5, { width: 38, align: 'right' });
-        doc.text('IVA', COL.iva, y + 5, { width: 28, align: 'right' });
-        doc.text('Valor', COL.total, y + 5, { width: tableRight - COL.total, align: 'right' });
-
-        y += 18;
-        doc.font('Helvetica').fontSize(8).fillColor(COLORS.text);
-
-        (docData.items || []).forEach((item, idx) => {
-          const rowH = 22;
-          if (idx % 2 === 0) doc.rect(ML, y, W - ML * 2, rowH).fill(COLORS.rowAlt);
-          const cy2 = y + 6;
-          doc.fillColor(COLORS.text);
-          doc.text(String(idx + 1).padStart(4, '0'), COL.artigo, cy2);
-          doc.text(item.description, COL.desc, cy2, { width: 238 });
-          doc.text(String(item.quantity), COL.qty, cy2, { width: 38, align: 'right' });
-          doc.text(fmt(item.unitPrice), COL.unit, cy2, { width: 58, align: 'right' });
-          doc.text(fmt(item.discount), COL.disc, cy2, { width: 38, align: 'right' });
-          doc.text(`${item.vatRate ?? 14},00`, COL.iva, cy2, { width: 28, align: 'right' });
-          doc.text(fmt(item.total), COL.total, cy2, { width: tableRight - COL.total, align: 'right' });
-          doc.rect(ML, y + rowH - 1, W - ML * 2, 0.5).fill(COLORS.border);
-          y += rowH;
+        let current: InvoiceItem[] = [];
+        let cursor = ITEMS_TOP;
+        items.forEach((it) => {
+          const h = rowHeightOf(it);
+          if (cursor + h > ITEMS_LIMIT && current.length > 0) {
+            pages.push(current);
+            current = [];
+            cursor = ITEMS_TOP;
+          }
+          current.push(it);
+          cursor += h;
         });
-        y += 12;
+        pages.push(current);
       }
+      const pageCount = pages.length;
 
-      // ── 8. Bottom section: Totals ─────────────
-      const bottomY = y;
-      const leftColW  = 230;
-      const rightColX = ML + leftColW + 10;
-      const rightColW = W - ML * 2 - leftColW - 10;
+      // ── Secções ──────────────────────────────────────────────────────────
 
-      if (docData.type !== 'RECIBO') {
-        // Tax Summary
-        doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(8).text('Quadro Resumo de Impostos', ML, bottomY);
-        const txH = bottomY + 14;
-        doc.rect(ML, txH, leftColW, 16).fill(primaryColor);
-        doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(7.5);
-        doc.text('Taxa/Valor', ML + 2, txH + 4);
-        doc.text('Incid./Qtd.', ML + 65, txH + 4, { width: 80, align: 'right' });
-        doc.text('Total', ML + 148, txH + 4, { width: leftColW - 150, align: 'right' });
+      /** Logótipo, emitente à esquerda e destinatário à direita. */
+      const drawHeader = (pageIndex: number) => {
+        doc.fillColor(COLORS.text).font('Helvetica').fontSize(7.5)
+          .text(`Pág.  ${pageIndex + 1}/${pageCount}`, MR - 90, 24, { width: 90, align: 'right' });
 
-        const vatGroups: Record<string, { incidence: number; total: number }> = {};
-        (docData.items || []).forEach((item) => {
-          const rate = `${item.vatRate ?? 14},00`;
-          if (!vatGroups[rate]) vatGroups[rate] = { incidence: 0, total: 0 };
-          vatGroups[rate].incidence += item.total;
-          vatGroups[rate].total += item.total * ((item.vatRate ?? 14) / 100);
-        });
-
-        let taxY = txH + 16;
-        Object.entries(vatGroups).forEach(([rate, g], i) => {
-          if (i % 2 === 0) doc.rect(ML, taxY, leftColW, 14).fill(COLORS.rowAlt);
-          doc.fillColor(COLORS.text).font('Helvetica').fontSize(7.5);
-          doc.text(`IVA (${rate})`, ML + 2, taxY + 3);
-          doc.text(fmt(g.incidence), ML + 65, taxY + 3, { width: 80, align: 'right' });
-          doc.text(fmt(g.total), ML + 148, taxY + 3, { width: leftColW - 150, align: 'right' });
-          taxY += 14;
-        });
-
-        if (docData.type === 'NOTA_CREDITO' && docData.cancelReason) {
-            taxY += 10;
-            doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(8).text('Motivo de Retificação', ML, taxY);
-            taxY += 12;
-            doc.fillColor(COLORS.text).font('Helvetica').fontSize(8).text(docData.cancelReason, ML, taxY, { width: leftColW });
+        let y = 30;
+        if (logo) {
+          try {
+            doc.image(logo, ML, 18, { height: 72 });
+            y = 100;
+          } catch (_) {
+            // Logótipo inacessível: a factura segue sem imagem em vez de falhar.
+          }
         }
-      }
 
-      // Totals
-      let tY = bottomY;
-      const tRows = docData.type === 'RECIBO' ? [] : [
-        { label: 'Mercadoria/Serviços', value: fmt(docData.subtotal) },
-        { label: 'Desconto Comercial',  value: fmt(docData.discountTotal || 0) },
-        { label: 'IVA',                 value: fmt(docData.taxTotal) },
-      ];
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.text)
+          .text(org.name.toUpperCase(), ML, y, { width: 250 });
+        y += 12;
 
-      tRows.forEach((row, i) => {
-        if (i % 2 === 0) doc.rect(rightColX, tY, rightColW, 14).fill(COLORS.rowAlt);
-        doc.fillColor(COLORS.text).font('Helvetica').fontSize(7.5);
-        doc.text(row.label, rightColX + 4, tY + 3);
-        doc.text(row.value, rightColX + 4, tY + 3, { width: rightColW - 4, align: 'right' });
-        tY += 14;
+        doc.font('Helvetica').fontSize(7.5);
+        const emitterLines = [
+          org.nif ? `Contribuinte N.º: ${org.nif}` : null,
+          org.address || null,
+          org.city || null,
+          org.postalCode || null,
+          (org.phone || org.fax) ? `Telef. ${org.phone || ''}  Fax. ${org.fax || ''}` : null,
+          org.email || null,
+        ].filter(Boolean) as string[];
+
+        emitterLines.forEach((line) => {
+          doc.text(line, ML, y, { width: 250 });
+          y += 12;
+        });
+
+        // Destinatário
+        let cy = 146;
+        value('Exmo.(s) Sr.(s)', 320, cy);
+        cy += 14;
+        doc.font('Helvetica').fontSize(7.5)
+          .text(docData.customerName.toUpperCase(), 320, cy, { width: 246 });
+        cy += 12;
+        if (docData.customerAddress) {
+          doc.text(docData.customerAddress, 320, cy, { width: 246 });
+          cy += 12;
+        }
+        cy += 12;
+        if (docData.customerCity) { doc.text(docData.customerCity, 320, cy); cy += 12; }
+        if (docData.customerPostalCode) { doc.text(docData.customerPostalCode, 320, cy); }
+      };
+
+      /** Título do documento e marca de via ("Original"). */
+      const drawTitle = () => {
+        const seriesText = typeof docData.series === 'object' && docData.series
+          ? `${docData.series.prefix}/${docData.series.year}`
+          : (docData.series || '');
+        const heading = [DOCUMENT_LABELS[docData.type], docData.number || seriesText || 'RASCUNHO']
+          .filter(Boolean).join(' ');
+
+        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(12.5).text(heading, ML, 232);
+        doc.font('Helvetica-Bold').fontSize(7.5)
+          .text(docData.copyLabel || 'Original', MR - 90, 240, { width: 90, align: 'right' });
+        rule(252, ML, MR, 0.8);
+      };
+
+      /** Grelha de metadados: duas linhas de campos, com régua por célula. */
+      const drawMetaGrid = () => {
+        const cols = [ML, ML + 100, ML + 200, ML + 305, ML + 410];
+        const cellW = 95;
+
+        const row = (y: number, cells: Array<{ label: string; value: string } | null>) => {
+          cells.forEach((cell, i) => {
+            if (!cell) return;
+            const x = cols[i] as number;
+            label(cell.label, x, y);
+            value(cell.value, x, y + 11);
+            rule(y + 22, x, x + cellW, 0.4, COLORS.border);
+          });
+        };
+
+        row(258, [
+          { label: 'V/N.º Contrib.', value: docData.customerNif || '' },
+          { label: 'Requisição', value: docData.requisition || '' },
+          { label: 'Moeda', value: docData.currency },
+          { label: 'Câmbio', value: docData.exchangeRate ? fmt(docData.exchangeRate) : '' },
+          { label: 'Data', value: fmtIso(docData.date) },
+        ]);
+
+        row(288, [
+          { label: 'Desconto Comercial', value: fmt(docData.discountTotal || 0) },
+          { label: 'Desconto Adicional', value: fmt(0) },
+          {
+            label: isReceipt ? 'Forma Pagamento' : 'Vencimento',
+            value: isReceipt ? (docData.paymentMethod || '') : fmtIso(docData.dueDate),
+          },
+          { label: 'Condição Pagamento', value: docData.paymentCondition || '' },
+          null,
+        ]);
+      };
+
+      /** Cabeçalho da tabela de linhas. */
+      const drawItemsHeader = () => {
+        const y = 316;
+        label('Artigo', COL.code, y);
+        label('Descrição', COL.desc, y);
+        label('Qtd.', COL.qtyR - 40, y, { width: 40, align: 'right' });
+        label('Un.', COL.unit, y);
+        label('Pr. Unitário', COL.priceR - 70, y, { width: 70, align: 'right' });
+        label('Desc.', COL.discR - 35, y, { width: 35, align: 'right' });
+        label('IVA', COL.vatR - 36, y, { width: 36, align: 'right' });
+        label('Valor', COL.valueR - 46, y, { width: 46, align: 'right' });
+        rule(328, ML, MR, 0.8);
+      };
+
+      /** Linhas do documento. */
+      const drawItems = (pageItems: InvoiceItem[]) => {
+        let y = ITEMS_TOP;
+        pageItems.forEach((it, idx) => {
+          const h = rowHeightOf(it);
+          value(it.code || String(idx + 1).padStart(4, '0'), COL.code, y);
+          value(it.description, COL.desc, y, { width: COL.descW });
+          numRight(fmt(it.quantity), COL.qtyR, y, 40);
+          value(it.unit || 'UN', COL.unit, y);
+          numRight(fmt(it.unitPrice), COL.priceR, y, 70);
+          numRight(fmt(it.discount || 0), COL.discR, y, 35);
+          if (it.taxExemptionCode) {
+            doc.fillColor(COLORS.text).font('Helvetica').fontSize(7)
+              .text(`(${it.taxExemptionCode})`, COL.vatCode, y);
+          }
+          numRight(fmt(rateOf(it)), COL.vatR, y, 20);
+          numRight(fmt(it.total), COL.valueR, y, 46);
+          y += h;
+        });
+      };
+
+      /** Corpo do recibo, em vez da tabela de linhas. */
+      const drawReceiptBody = () => {
+        doc.fillColor(COLORS.text).font('Helvetica').fontSize(9).text(
+          `Recebemos de ${docData.customerName} a quantia de ${fmt(docData.total)} ${docData.currency} `
+          + `(${numberToWords(docData.total)}), referente à liquidação da factura `
+          + `${docData.invoiceNumber || '—'}.`,
+          ML, ITEMS_TOP, { width: CW, lineGap: 4 }
+        );
+      };
+
+      /** Menção legal a meio da folha, exigida pela AGT. */
+      const drawLegalNote = () => {
+        rule(486, ML, MR, 0.4, COLORS.border);
+        const validation = org.agtValidationNumber || docData.softwareValidation;
+        const parts = [
+          validation
+            ? `Processado por programa validado n.º ${validation}`
+            : 'Documento processado por computador',
+          `Os bens e/ou serviços foram colocados à disposição na data ${fmtIso(docData.serviceDate || docData.date)}`,
+          `© ${org.name}`,
+        ];
+        doc.fillColor(COLORS.muted).font('Helvetica').fontSize(6.5)
+          .text(`${parts.join(' | ')} /`, ML, 492, { width: CW });
+        rule(504, ML, MR, 0.4, COLORS.border);
+      };
+
+      /** Quadro Resumo de Impostos e Quadro de Retenção (coluna esquerda). */
+      const drawTaxBlocks = () => {
+        let y = 518;
+        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(7.5)
+          .text('Quadro Resumo de Impostos', ML, y);
+        y += 14;
+
+        label('Taxa/Valor', ML, y);
+        label('Incid./Qtd.', 192, y, { width: 60, align: 'right' });
+        label('Total', 236, y, { width: 40, align: 'right' });
+        label('Motivo Isenção', 294, y);
+        y += 11;
+        rule(y, ML, LEFT_BLOCK_R, 0.4);
+        y += 4;
+
+        if (vatGroups.size === 0) {
+          value('—', ML, y);
+          y += 13;
+        }
+        vatGroups.forEach((g, rate) => {
+          value(`IVA (${fmt(rate)})`, ML, y);
+          const code = g.code || org.taxExemptionCode;
+          if (code) value(`(${code})`, 127, y);
+          numRight(fmt(g.incidence), 252, y, 60);
+          numRight(fmt(g.total), 288, y, 40);
+          const reason = g.reason || (rate === 0 ? org.taxExemptionReason : null);
+          if (reason) {
+            doc.fillColor(COLORS.text).font('Helvetica').fontSize(7)
+              .text(reason, 294, y, { width: 96, lineBreak: false });
+          }
+          y += 13;
+        });
+
+        y = Math.max(y + 18, 584);
+        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(7.5)
+          .text('Quadro de Retenção', ML, y);
+        y += 14;
+        label('Entidade', ML, y);
+        label('Inc.', 192, y, { width: 60, align: 'right' });
+        label('%', 248, y, { width: 40, align: 'right' });
+        label('Valor', LEFT_BLOCK_R - 60, y, { width: 60, align: 'right' });
+        y += 11;
+        rule(y, ML, LEFT_BLOCK_R, 0.4);
+        y += 4;
+
+        if (retentionEntity && retentionValue !== null) {
+          value(retentionEntity, ML, y, { width: 130 });
+          numRight(fmt(retentionBase), 252, y, 60);
+          numRight(fmt(retentionRate as number), 288, y, 40);
+          numRight(fmt(retentionValue), LEFT_BLOCK_R, y, 60);
+        } else {
+          value('Sem retenção na fonte', ML, y, { width: 200 });
+        }
+      };
+
+      /** Resumo de totais (coluna direita) e total geral. */
+      const drawTotals = () => {
+        // Posições medidas no modelo de referência: primeira linha a 512pt,
+        // passo de 11,3pt, "Acerto" destacado a 600 e total geral a 640.
+        let y = 512;
+        const rows: Array<[string, number]> = [
+          ['Mercadoria/Serviços', docData.subtotal],
+          ['Desconto Comercial', docData.discountTotal || 0],
+          ['Desconto Adicional', 0],
+          ['Portes', 0],
+          ['Outros Serviços', 0],
+          ['Adiantamentos', 0],
+          ['IEC/Outras Contribuições', 0],
+        ];
+
+        rows.forEach(([lbl, val]) => {
+          value(lbl, SUMMARY_X, y);
+          numRight(fmt(val), MR, y, 90);
+          rule(y + 10, SUMMARY_X, MR, 0.3, COLORS.border);
+          y += 11.3;
+        });
+
+        // "Acerto" fica destacado das restantes linhas, imediatamente acima do
+        // bloco do total, como no modelo.
+        value('Acerto', SUMMARY_X, 600);
+        numRight(fmt(0), MR, 600, 90);
+        rule(611, SUMMARY_X, MR, 0.3, COLORS.border);
+
+        rule(632, SUMMARY_X, MR, 0.8);
+        doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(12.5)
+          .text(`Total ( ${docData.currency} )`, SUMMARY_X, 640);
+        doc.font('Helvetica-Bold').fontSize(12.5)
+          .text(fmt(docData.total), MR - 130, 640, { width: 130, align: 'right' });
+      };
+
+      /** Blocos Carga / Descarga, com as moradas do emitente e do cliente. */
+      const drawLogistics = () => {
+        const y0 = 664;
+        const cols: Array<{ x: number; title: string; lines: Array<string | null> }> = [
+          {
+            x: ML,
+            title: 'Carga',
+            lines: [
+              `N/ Morada - ${fmtIso(docData.date)} / ${fmtTime(docData.date)}`,
+              org.address || null,
+              null,
+              org.city || null,
+              org.postalCode || null,
+              org.country || 'Angola',
+            ],
+          },
+          {
+            x: 216,
+            title: 'Descarga',
+            lines: [
+              'V/ Morada',
+              docData.customerAddress || null,
+              null,
+              docData.customerCity || null,
+              docData.customerPostalCode || null,
+              docData.customerCountry || 'Angola',
+            ],
+          },
+        ];
+
+        cols.forEach((col) => {
+          let y = y0;
+          doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(7.5).text(col.title, col.x, y);
+          y += 11;
+          rule(y, col.x, col.x + 150, 0.4);
+          y += 4;
+          col.lines.forEach((line) => {
+            if (line) value(line, col.x, y, { width: 150 });
+            y += 11;
+          });
+        });
+      };
+
+      /** Coordenadas bancárias e nota de rodapé da organização. */
+      const drawBankDetails = () => {
+        let y = 752;
+        if (org.bankAccount || org.iban) {
+          const bank = org.bankName ? ` ${org.bankName.toUpperCase()}` : '';
+          doc.fillColor(COLORS.text).font('Helvetica').fontSize(8.5)
+            .text(`COORDENADAS BANCÁRIAS${bank}:`, ML, y, { underline: true });
+          y += 13;
+          doc.fontSize(8.5);
+          if (org.bankAccount) { doc.text(`CONTA Nº ${org.bankAccount}`, ML, y); y += 13; }
+          if (org.iban) { doc.text(`IBAN: ${org.iban}`, ML, y); y += 13; }
+        }
+
+        if (docData.notes) {
+          doc.fillColor(COLORS.muted).font('Helvetica-Oblique').fontSize(6.5)
+            .text(docData.notes, ML, Math.max(y + 4, 802), { width: CW });
+        }
+      };
+
+      // ── Montagem das páginas ─────────────────────────────────────────────
+      pages.forEach((pageItems, index) => {
+        if (index > 0) doc.addPage();
+
+        drawHeader(index);
+        drawTitle();
+        drawMetaGrid();
+
+        if (isReceipt) {
+          drawReceiptBody();
+        } else {
+          drawItemsHeader();
+          drawItems(pageItems);
+        }
+
+        if (index === pageCount - 1) {
+          drawLegalNote();
+          if (!isReceipt) drawTaxBlocks();
+          drawTotals();
+          drawLogistics();
+          drawBankDetails();
+        } else {
+          doc.fillColor(COLORS.muted).font('Helvetica-Oblique').fontSize(7)
+            .text('continua na página seguinte…', ML, ITEMS_LIMIT + 6, { width: CW, align: 'right' });
+        }
       });
-
-      tY += 2;
-      doc.rect(rightColX, tY, rightColW, 26).fill(primaryColor);
-      doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(10)
-        .text(`Total ( ${docData.currency} )`, rightColX + 4, tY + 7);
-      doc.fontSize(12).text(`${fmt(docData.total)}`, rightColX + 4, tY + 6, { width: rightColW - 6, align: 'right' });
-
-      tY += 32;
-      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7)
-        .text(`Total (${docData.currency}): ${numberToWords(docData.total)}`, rightColX, tY, { width: rightColW });
-
-      // ── 9. Bank details ──────────────────────────────────────────────────
-      let bankY = tY + 30;
-      if (docData.organization.bankAccount || docData.organization.iban) {
-        doc.rect(ML, bankY, W - ML * 2, 0.5).fill(COLORS.border);
-        let bY = bankY + 8;
-        doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(8).text('COORDENADAS BANCÁRIAS', ML, bY);
-        bY += 12;
-        doc.fillColor(COLORS.text).font('Helvetica').fontSize(8);
-        if (docData.organization.bankName) { doc.text(docData.organization.bankName, ML, bY); bY += 10; }
-        if (docData.organization.bankAccount) { doc.text(`Conta Nº ${docData.organization.bankAccount}`, ML, bY); bY += 10; }
-        if (docData.organization.iban) { doc.text(`IBAN: ${docData.organization.iban}`, ML, bY); }
-        bankY = bY + 16;
-      }
-
-      // ── 9.5 Notes / observações (parametrização da organização) ──────────
-      if (docData.notes) {
-        let noteY = bankY + 8;
-        doc.fillColor(COLORS.muted).font('Helvetica-Oblique').fontSize(7.5)
-          .text(docData.notes, ML, noteY, { width: W - ML * 2, align: 'left' });
-      }
-
-      // ── 10. Footer ───────────────────────────────────────────────────────
-      const footerY = H - 36;
-      doc.rect(0, footerY - 4, W, 0.5).fill(COLORS.border);
-      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7);
-      if (docData.softwareValidation) doc.text(`Processado por programa validado n.º ${docData.softwareValidation}`, ML, footerY);
-      doc.text('Documento processado por computador.', 0, footerY + 20, { width: W, align: 'center' });
-      doc.rect(0, H - 6, W, 6).fill(primaryColor);
 
       doc.end();
     });

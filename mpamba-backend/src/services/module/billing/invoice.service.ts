@@ -71,13 +71,51 @@ export class InvoiceService extends BaseBillingService {
 
 		const { items, totals } = await this.calculateTotals(prisma, orgId, data.items, data.customerId ?? null);
 
+		const organization = await prisma.organization.findUnique({
+			where: { id: orgId },
+			select: {
+				invoiceDueDays: true,
+				taxExemptionCode: true,
+				taxExemptionReason: true,
+				retentionEntity: true,
+				retentionRate: true,
+			},
+		});
+
 		let dueDate = data.dueDate;
 		if (!dueDate) {
-			const organization = await prisma.organization.findUnique({ where: { id: orgId }, select: { invoiceDueDays: true } });
 			const days = organization?.invoiceDueDays ?? 30;
 			dueDate = new Date();
 			dueDate.setDate(dueDate.getDate() + days);
 		}
+
+		// Unidade e motivo de isenção impressos na linha da factura. A unidade
+		// segue a do produto quando existir; o motivo só se aplica a taxa zero,
+		// caso em que a AGT exige a menção expressa da norma de isenção.
+		const productIds = [...new Set(items.map((item: any) => item.productId).filter(Boolean))] as string[];
+		const products = productIds.length
+			? await prisma.product.findMany({
+				where: { id: { in: productIds }, organizationId: orgId },
+				select: { id: true, unit: true },
+			})
+			: [];
+		const unitByProduct = new Map(products.map((product) => [product.id, product.unit]));
+
+		const itemsToCreate = items.map((item: any) => ({
+			...item,
+			unit: item.unit || (item.productId ? unitByProduct.get(item.productId) : null) || 'UN',
+			taxExemptionCode: item.taxExemptionCode
+				?? (item.taxRate === 0 ? organization?.taxExemptionCode ?? null : null),
+			taxExemptionReason: item.taxExemptionReason
+				?? (item.taxRate === 0 ? organization?.taxExemptionReason ?? null : null),
+		}));
+
+		// Retenção na fonte: o que vier no pedido tem precedência sobre a
+		// parametrização da organização. Incide sobre a base tributável.
+		const retentionRate = data.retentionRate ?? organization?.retentionRate ?? null;
+		const retentionEntity = data.retentionEntity ?? organization?.retentionEntity ?? null;
+		const retentionBase = totals.subtotal - totals.discountTotal;
+		const retentionValue = retentionRate ? (retentionBase * retentionRate) / 100 : null;
 
 		return prisma.invoice.create({
 			data: {
@@ -87,8 +125,12 @@ export class InvoiceService extends BaseBillingService {
 				organizationId: orgId,
 				userId,
 				status: 'DRAFT',
+				retentionEntity,
+				retentionRate,
+				retentionBase: retentionRate ? retentionBase : null,
+				retentionValue,
 				items: {
-					create: items,
+					create: itemsToCreate,
 				},
 			},
 			include: { items: true },
@@ -152,13 +194,45 @@ export class InvoiceService extends BaseBillingService {
 			include: {
 				items: true,
 				series: true,
+				customer: { select: { address: true, email: true } },
 				organization: {
-					select: { name: true, nif: true, address: true, phone: true, invoiceFooterNote: true }
-				}
+					select: {
+						name: true, nif: true, address: true, phone: true, email: true,
+						invoiceFooterNote: true,
+						city: true, postalCode: true, country: true, fax: true, logoUrl: true,
+						bankName: true, bankAccount: true, iban: true,
+						agtValidationNumber: true, taxExemptionCode: true, taxExemptionReason: true,
+						retentionEntity: true, retentionRate: true,
+					},
+				},
 			},
 		});
 		if (!invoice) throw new Error('Fatura não encontrada');
-		return invoice;
+
+		// O InvoiceItem guarda apenas o productId, sem relação declarada. Os
+		// produtos são lidos à parte para preencher as colunas "Artigo" (código)
+		// e "Un." (unidade) da factura.
+		const invoiceItems = invoice.items ?? [];
+		const productIds = [...new Set(invoiceItems.map((item) => item.productId).filter(Boolean))] as string[];
+		const products = productIds.length
+			? await prisma.product.findMany({
+				where: { id: { in: productIds } },
+				select: { id: true, sku: true, unit: true },
+			})
+			: [];
+		const productById = new Map(products.map((product) => [product.id, product]));
+
+		return {
+			...invoice,
+			items: invoiceItems.map((item) => {
+				const product = item.productId ? productById.get(item.productId) : null;
+				return {
+					...item,
+					code: product?.sku ?? null,
+					unit: item.unit || product?.unit || 'UN',
+				};
+			}),
+		};
 	}
 
 	async issueInvoice(id: string) {

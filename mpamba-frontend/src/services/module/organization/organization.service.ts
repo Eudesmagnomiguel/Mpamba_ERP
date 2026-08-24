@@ -18,6 +18,12 @@ export const organizationService = {
 		return response.data.data;
 	},
 
+	/** Guarda o logótipo da factura: URL http(s) ou a imagem em data URI. */
+	async updateMineLogo(logo: string) {
+		const response = await apiClient.put<{ data: { logoUrl: string | null } }>("/organizations/me/logo", { logo });
+		return response.data.data;
+	},
+
 	async getById(id: string) {
 		const response = await apiClient.get<Organization>(`/organizations/${id}`);
 		return response.data;

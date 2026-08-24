@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import type { AuthRequest } from "../../middleware/auth.middleware.js";
 import { organizationService } from "../../services/module/organization.services.js";
-import { createOrganizationSchema, updateOrganizationSchema, updateOwnOrganizationSchema } from "../../shared/dto/organization.dto.js";
+import { createOrganizationSchema, updateOrganizationSchema, updateOwnOrganizationSchema, updateOrganizationLogoSchema } from "../../shared/dto/organization.dto.js";
 
 export class OrganizationController {
 	async getMine(req: AuthRequest, res: Response) {
@@ -36,6 +36,28 @@ export class OrganizationController {
 			res.status(500).json({ error: "Erro ao atualizar dados da organização" });
 		}
 	}
+	/**
+	 * Guarda o logótipo da organização: um URL http(s) ou a imagem em data URI.
+	 * A imagem fica na base de dados porque o alojamento serverless não tem
+	 * disco persistente entre invocações.
+	 */
+	async updateMineLogo(req: AuthRequest, res: Response) {
+		try {
+			const organizationId = req.user?.organizationId;
+			if (!organizationId) {
+				return res.status(400).json({ error: "Utilizador não pertence a nenhuma organização" });
+			}
+			const { logo } = updateOrganizationLogoSchema.parse(req.body);
+			const organization = await organizationService.update(organizationId, { logoUrl: logo });
+			res.json({ data: { logoUrl: organization.logoUrl } });
+		} catch (error) {
+			if (error instanceof Error && error.name === "ZodError") {
+				return res.status(400).json({ error: "Logótipo inválido", details: error });
+			}
+			res.status(500).json({ error: "Erro ao guardar o logótipo" });
+		}
+	}
+
 	async getAll(req: Request, res: Response) {
 		try {
 			const page = parseInt(req.query.page as string) || 1;

@@ -69,6 +69,24 @@ model Organization {
   isActive            Boolean              @default(true)
   planId              String?
   invoiceFooterNote   String?
+  // Dados de emitente exigidos na factura (formato AGT)
+  city                String?
+  postalCode          String?
+  country             String?              @default("Angola")
+  fax                 String?
+  logoUrl             String?
+  // Coordenadas bancárias impressas no rodapé da factura
+  bankName            String?
+  bankAccount         String?
+  iban                String?
+  // Menção legal do programa validado pela AGT, ex.: "41/AGT/2019"
+  agtValidationNumber String?
+  // Isenção de IVA por defeito, ex.: código "M00" / motivo "IVA - Regime Simplificado"
+  taxExemptionCode    String?
+  taxExemptionReason  String?
+  // Retenção na fonte por defeito, ex.: "RIR - Rendimentos Profissionais" a 6,5%
+  retentionEntity     String?
+  retentionRate       Float?
   invoiceDueDays      Int                  @default(30)
   posInvoiceThreshold Float                @default(50000)
   createdAt           DateTime             @default(now())
@@ -413,6 +431,15 @@ model Invoice {
   dueDate         DateTime?
   paymentStatus   PaymentStatus @default(PENDENTE)
   overdueAlertedAt DateTime?
+  // Cabeçalho da factura no formato AGT
+  exchangeRate    Float?
+  paymentCondition String?
+  requisition     String?
+  // Quadro de retenção na fonte (calculado na emissão)
+  retentionEntity String?
+  retentionRate   Float?
+  retentionBase   Float?
+  retentionValue  Float?
   creditNotes     CreditNote[]
   customer        Customer?     @relation(fields: [customerId], references: [id])
   organization    Organization  @relation(fields: [organizationId], references: [id])
@@ -440,6 +467,10 @@ model InvoiceItem {
   updatedAt    DateTime @updatedAt
   baseTaxRate  Float    @default(0)
   taxBreakdown Json?
+  // Unidade e isenção impressas na linha da factura
+  unit               String  @default("UN")
+  taxExemptionCode   String?
+  taxExemptionReason String?
   invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   service      Service? @relation(fields: [serviceId], references: [id])
 }

@@ -26,6 +26,16 @@ export const useUpdateMyOrganization = () => {
 	});
 };
 
+export const useUpdateMyOrganizationLogo = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (logo: string) => organizationService.updateMineLogo(logo),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['organization', 'me'] });
+		},
+	});
+};
+
 export const useOrganization = (id: string) => {
 	return useQuery({
 		queryKey: ['organization', id],

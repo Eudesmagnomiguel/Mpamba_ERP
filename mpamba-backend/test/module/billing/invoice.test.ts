@@ -18,6 +18,12 @@ vi.mock('../../../src/config/prisma.config.js', () => ({
 		service: {
 			findMany: vi.fn(),
 		},
+		organization: {
+			findUnique: vi.fn(),
+		},
+		product: {
+			findMany: vi.fn(),
+		},
 		taxRule: {
 			findMany: vi.fn(),
 		},
@@ -107,11 +113,32 @@ describe('InvoiceService', () => {
 
 	describe('getInvoiceById', () => {
 		it('deve retornar fatura por id', async () => {
-			const mockInvoice = { id: 'inv-1', organizationId: 'org-1' };
+			const mockInvoice = { id: 'inv-1', organizationId: 'org-1', items: [] };
 			(prisma.invoice.findFirst as any).mockResolvedValue(mockInvoice);
 
 			const result = await service.getInvoiceById('inv-1');
 			expect(result).toEqual(mockInvoice);
+		});
+
+		it('deve preencher código e unidade das linhas a partir do produto', async () => {
+			(prisma.invoice.findFirst as any).mockResolvedValue({
+				id: 'inv-1',
+				organizationId: 'org-1',
+				items: [
+					{ id: 'it-1', productId: 'prod-1', description: 'Cimento', unit: '' },
+					{ id: 'it-2', productId: null, description: 'Serviço', unit: 'HR' },
+				],
+			});
+			(prisma.product.findMany as any).mockResolvedValue([
+				{ id: 'prod-1', sku: 'CIM-50', unit: 'SC' },
+			]);
+
+			const result: any = await service.getInvoiceById('inv-1');
+
+			// Linha com produto: código e unidade herdados do produto
+			expect(result.items[0]).toMatchObject({ code: 'CIM-50', unit: 'SC' });
+			// Linha sem produto: unidade própria preservada, sem código de artigo
+			expect(result.items[1]).toMatchObject({ code: null, unit: 'HR' });
 		});
 
 		it('deve lançar erro se fatura não existir', async () => {
