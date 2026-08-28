@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import OrganizationForm from '@/components/admin/organizations/OrganizationForm';
 import { useCreateOrganization } from '@/hooks/module/organization';
 import { CreateOrganizationDto } from '@/shared/dto/organization.dto';
+import { getApiErrorMessage } from '@/shared/utils/api-error.utils';
 
 export default function NewOrganizationPage() {
     const router = useRouter();
@@ -19,8 +20,7 @@ export default function NewOrganizationPage() {
             router.push('/admin/organizations');
         } catch (error: any) {
             console.error('Error creating organization:', error);
-            const message = error.response?.data?.message || 'Ocorreu um erro ao criar a organização.';
-            toast.error(message);
+            toast.error(getApiErrorMessage(error, 'Ocorreu um erro ao criar a organização.'));
         }
     };
 

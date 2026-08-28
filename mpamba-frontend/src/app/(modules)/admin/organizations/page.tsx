@@ -26,8 +26,9 @@ import { ptBR } from 'date-fns/locale';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApproveOrganization, useActivateDirectly } from '@/hooks/core/useAuth';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/auth.store';
 import { PERMISSIONS } from '@/shared/constants/permission.constants';
+import { useHasPermission } from '@/hooks/core/usePermission';
+import { getApiErrorMessage } from '@/shared/utils/api-error.utils';
 
 export default function OrganizationsPage() {
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -38,9 +39,8 @@ export default function OrganizationsPage() {
     const approveMutation = useApproveOrganization();
     const activateDirectlyMutation = useActivateDirectly();
 
-    const user = useAuthStore(state => state.user);
-    const hasOrgCreate = user?.permissions?.includes(PERMISSIONS.ORGANIZATION_CREATE);
-    const hasOrgUpdate = user?.permissions?.includes(PERMISSIONS.ORGANIZATION_UPDATE);
+    const hasOrgCreate = useHasPermission(PERMISSIONS.ORGANIZATION_CREATE);
+    const hasOrgUpdate = useHasPermission(PERMISSIONS.ORGANIZATION_UPDATE);
 
     const handleApprove = async (id: string) => {
         try {
@@ -48,7 +48,7 @@ export default function OrganizationsPage() {
             toast.success("E-mail de ativação enviado com sucesso!");
             queryClient.invalidateQueries({ queryKey: ['organizations'] });
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Erro ao aprovar organização.");
+            toast.error(getApiErrorMessage(error, "Erro ao aprovar organização."));
         }
     };
 
@@ -58,7 +58,7 @@ export default function OrganizationsPage() {
             toast.success("Organização ativada diretamente com sucesso!");
             queryClient.invalidateQueries({ queryKey: ['organizations'] });
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Erro ao ativar organização.");
+            toast.error(getApiErrorMessage(error, "Erro ao ativar organização."));
         }
     };
 

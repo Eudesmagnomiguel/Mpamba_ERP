@@ -12,15 +12,17 @@ export const refreshTokenSchema = z.object({
 });
 
 // Registration request schema
+// Os limites acompanham o formulário de registo do frontend (signup.dto.ts).
+// Divergirem fazia o servidor recusar candidaturas que o formulário aceitou.
 export const registerSchema = z.object({
-	orgName: z.string().min(3, 'Nome da empresa deve ter no mínimo 3 caracteres'),
-	nif: z.string().min(9, 'NIF inválido').max(14, 'NIF inválido'),
-	address: z.string().optional(),
-	phone: z.string().optional(),
-	orgEmail: z.string().email('Email da organização inválido').optional(),
-	planId: z.string().uuid('ID do plano inválido'),
-	adminName: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-	adminEmail: z.email('Email inválido'),
+	orgName: z.string().trim().min(3, 'Nome da empresa deve ter no mínimo 3 caracteres'),
+	nif: z.string().trim().min(5, 'NIF inválido').max(20, 'NIF inválido'),
+	address: z.string().trim().optional().or(z.literal('')),
+	phone: z.string().trim().optional().or(z.literal('')),
+	orgEmail: z.string().trim().email('Email da organização inválido').optional().or(z.literal('')),
+	planId: z.string().min(1, 'Selecione um plano'),
+	adminName: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres'),
+	adminEmail: z.string().trim().email('Email inválido'),
 	password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 });
 

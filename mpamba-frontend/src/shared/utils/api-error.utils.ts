@@ -15,5 +15,9 @@ export function getApiErrorMessage(error: any, fallback: string): string {
 		return "Sem conexão à internet. Verifique a sua rede e tente novamente.";
 	}
 
-	return error?.response?.data?.message || fallback;
+	// Alguns endpoints devolvem `{ error }` em vez de `{ message }`; sem ler as
+	// duas chaves, mensagens úteis (ex.: "NIF já registado") perdiam-se e o
+	// utilizador via sempre o texto genérico.
+	const data = error?.response?.data;
+	return data?.message || data?.error || fallback;
 }

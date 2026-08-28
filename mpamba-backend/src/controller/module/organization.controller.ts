@@ -1,7 +1,39 @@
 import type { Request, Response } from "express";
 import type { AuthRequest } from "../../middleware/auth.middleware.js";
-import { organizationService } from "../../services/module/organization.services.js";
+import { organizationService, DuplicateNifError } from "../../services/module/organization.services.js";
 import { createOrganizationSchema, updateOrganizationSchema, updateOwnOrganizationSchema, updateOrganizationLogoSchema } from "../../shared/dto/organization.dto.js";
+
+/**
+ * Traduz a excepção num par (estado HTTP, mensagem) que o frontend consegue
+ * mostrar. Sem isto qualquer falha — incluindo NIF duplicado — chegava ao
+ * utilizador como um 500 genérico "Erro ao criar organização".
+ */
+function respondWithOrganizationError(res: Response, error: any, fallback: string) {
+	if (error?.name === "ZodError") {
+		const issue = error.issues?.[0];
+		const message = issue
+			? `${issue.path?.join(".") || "Dados"}: ${issue.message}`
+			: "Dados inválidos";
+		return res.status(400).json({ error: message, message, details: error.issues });
+	}
+
+	if (error instanceof DuplicateNifError || error?.code === "P2002") {
+		const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(", ") : error?.meta?.target;
+		const message =
+			error instanceof DuplicateNifError
+				? error.message
+				: `Já existe uma organização com o mesmo valor no campo ${target || "único"}.`;
+		return res.status(409).json({ error: message, message });
+	}
+
+	if (error?.code === "P2025") {
+		const message = "Organização não encontrada";
+		return res.status(404).json({ error: message, message });
+	}
+
+	console.error("[Organization]", fallback, error);
+	return res.status(500).json({ error: fallback, message: fallback });
+}
 
 export class OrganizationController {
 	async getMine(req: AuthRequest, res: Response) {
@@ -30,10 +62,7 @@ export class OrganizationController {
 			const organization = await organizationService.update(organizationId, data);
 			res.json({ data: organization });
 		} catch (error) {
-			if (error instanceof Error && error.name === "ZodError") {
-				return res.status(400).json({ error: "Dados inválidos", details: error });
-			}
-			res.status(500).json({ error: "Erro ao atualizar dados da organização" });
+			respondWithOrganizationError(res, error, "Erro ao atualizar dados da organização");
 		}
 	}
 	/**
@@ -95,10 +124,7 @@ export class OrganizationController {
 
 			res.status(201).json(organization);
 		} catch (error) {
-			if (error instanceof Error && error.name === "ZodError") {
-				return res.status(400).json({ error: "Dados inválidos", details: error });
-			}
-			res.status(500).json({ error: "Erro ao criar organização" });
+			respondWithOrganizationError(res, error, "Erro ao criar organização");
 		}
 	}
 
@@ -114,10 +140,7 @@ export class OrganizationController {
 
 			res.json(organization);
 		} catch (error) {
-			if (error instanceof Error && error.name === "ZodError") {
-				return res.status(400).json({ error: "Dados inválidos", details: error });
-			}
-			res.status(500).json({ error: "Erro ao atualizar organização" });
+			respondWithOrganizationError(res, error, "Erro ao atualizar organização");
 		}
 	}
 

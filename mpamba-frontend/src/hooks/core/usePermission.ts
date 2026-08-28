@@ -3,10 +3,19 @@ import permissionServices from '@/services/core/permission.services';
 import { CreatePermissionDto } from '@/shared/dto/permission.dto';
 import { useAuthStore } from '@/store/auth.store';
 
+/**
+ * O backend reconhece o super administrador por dois nomes de papel
+ * ('SUPER_ADMIN' e 'Super Administrador', o nome usado no seed). O frontend
+ * só reconhecia o primeiro, pelo que o super admin do seed ficava sem botões
+ * de criação mesmo tendo acesso garantido na API.
+ */
+export const isSuperAdminRole = (role?: string | null) =>
+	role === 'SUPER_ADMIN' || role === 'Super Administrador';
+
 export const useHasPermission = (permissionCode: string) => {
 	const { user } = useAuthStore();
 	if (!user) return false;
-	if (user.role === 'SUPER_ADMIN') return true;
+	if (isSuperAdminRole(user.role)) return true;
 	return user.permissions?.includes(permissionCode) ?? false;
 };
 export const usePermissions = (params?: { page?: number; pageSize?: number }) => {

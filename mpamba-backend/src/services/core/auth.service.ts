@@ -220,12 +220,26 @@ export class AuthService {
 	}
 
 	static async register(data: RegisterInput) {
-		const { orgName, nif, adminName, adminEmail, password, planId } = data;
+		const { orgName, adminName, password, planId } = data;
+
+		// O login procura o utilizador pelo email em minúsculas; se o registo
+		// gravasse "Admin@Empresa.ao" tal como foi escrito, esse utilizador
+		// nunca mais conseguiria entrar. Normalizamos aqui, uma única vez.
+		const adminEmail = data.adminEmail.toLowerCase().trim();
+		const nif = data.nif.trim();
+		const orgEmail = data.orgEmail?.trim().toLowerCase() || null;
 
 		// Check if email exists
 		const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
 		if (existingUser) {
 			throw new Error('Este email já está em uso');
+		}
+
+		// O NIF tem índice único: sem esta verificação a candidatura falhava com
+		// um erro cru do Prisma que o cliente via apenas como "Falha no registro".
+		const existingOrg = await prisma.organization.findUnique({ where: { nif } });
+		if (existingOrg) {
+			throw new Error('Já existe uma organização registada com este NIF. Se é a sua empresa, faça login ou contacte o suporte.');
 		}
 
 		// Validate plan exists
@@ -234,64 +248,67 @@ export class AuthService {
 			throw new Error('Plano selecionado não existe');
 		}
 
-		// Create Organization (inactive)
-		const organization = await (prisma.organization as any).create({
-			data: {
-				name: orgName,
-				nif,
-				address: data.address || '',
-				phone: data.phone || '',
-				email: data.orgEmail || '',
-				isActive: false,
-				planId
-			}
-		});
-
-		// Create Admin User (inactive)
 		const passwordHash = await bcrypt.hash(password, 10);
-		const user = await prisma.user.create({
-			data: {
-				name: adminName,
-				email: adminEmail,
-				passwordHash,
-				isActive: false,
-				organizationId: organization.id
-			}
-		});
+		const allPermissions = await prisma.permission.findMany({ select: { id: true } });
 
-		// 5. Assign Admin Role (get or create for this org)
-		let adminRole = await prisma.role.findFirst({
-			where: { name: 'Administrador', organizationId: organization.id }
-		});
-
-		if (!adminRole) {
-			adminRole = await prisma.role.create({
+		// Tudo numa transacção: se um dos passos falhar a meio (perfis, papéis),
+		// nada fica gravado. Antes ficava uma organização órfã com o NIF e o
+		// email já ocupados, e todas as tentativas seguintes falhavam com
+		// "Este email já está em uso" sem que a conta existisse de facto.
+		const organization = await prisma.$transaction(async (tx) => {
+			const org = await tx.organization.create({
 				data: {
-					name: 'Administrador',
-					description: 'Acesso total à organização',
-					organizationId: organization.id
+					name: orgName.trim(),
+					nif,
+					address: data.address?.trim() || null,
+					phone: data.phone?.trim() || null,
+					email: orgEmail,
+					isActive: false,
+					planId
 				}
 			});
 
-			// Link all permissions to this new role
-			const permissions = await prisma.permission.findMany();
-			await prisma.rolePermission.createMany({
-				data: permissions.map(p => ({
-					roleId: adminRole!.id,
-					permissionId: p.id
-				}))
+			const user = await tx.user.create({
+				data: {
+					name: adminName.trim(),
+					email: adminEmail,
+					passwordHash,
+					isActive: false,
+					organizationId: org.id
+				}
 			});
+
+			const adminRole = await tx.role.create({
+				data: {
+					name: 'Administrador',
+					description: 'Acesso total à organização',
+					organizationId: org.id,
+					permissions: {
+						createMany: {
+							data: allPermissions.map((permission) => ({ permissionId: permission.id }))
+						}
+					}
+				}
+			});
+
+			await tx.userRole.create({
+				data: {
+					userId: user.id,
+					roleId: adminRole.id
+				}
+			});
+
+			return org;
+		}, { timeout: 20000 });
+
+		// Criar os perfis pré-configurados (Diretor Geral, Tesoureiro, Facturista, etc.).
+		// Fora da transacção: é idempotente e uma falha aqui não deve anular
+		// uma candidatura já válida — os perfis podem ser recriados depois.
+		try {
+			await RoleTemplateService.createRoleTemplatesForOrganization(organization.id);
+		} catch (error) {
+			console.error(`[Register] Falha ao criar perfis pré-configurados para ${organization.id}:`, error);
 		}
-
-		await prisma.userRole.create({
-			data: {
-				userId: user.id,
-				roleId: adminRole.id
-			}
-		});
-
-		// Criar os perfis pré-configurados (Diretor Geral, Tesoureiro, Facturista, etc.)
-		await RoleTemplateService.createRoleTemplatesForOrganization(organization.id);
 
 		// Generate WhatsApp contact link
 		const whatsappNumber = "+244938629420";

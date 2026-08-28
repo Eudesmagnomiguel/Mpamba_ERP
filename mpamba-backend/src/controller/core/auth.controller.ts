@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import { AuthService } from '../../services/core/auth.service.js';
 import { PasswordResetService } from '../../services/core/password-reset.service.js';
 import type { AuthRequest } from '../../middleware/auth.middleware.js';
-import type { RegisterInput } from '../../shared/schema/auth.schema.js';
+import { registerSchema } from '../../shared/schema/auth.schema.js';
 import { toFriendlyErrorMessage, isInfrastructureError } from '../../shared/utils/db-error.utils.js';
 
 /**
@@ -89,9 +89,19 @@ export class AuthController {
 	 */
 	static async register(req: AuthRequest, res: Response) {
 		try {
-			const data: RegisterInput = req.body;
+			// O corpo era usado sem validação: um campo em falta chegava ao
+			// Prisma e voltava como "Falha no registro", sem dizer o que faltava.
+			const parsed = registerSchema.safeParse(req.body);
+			if (!parsed.success) {
+				const issue = parsed.error.issues[0];
+				return res.status(400).json({
+					status: 'error',
+					message: issue ? `${issue.path.join('.') || 'Dados'}: ${issue.message}` : 'Dados inválidos',
+					details: parsed.error.issues,
+				});
+			}
 
-			const result = await AuthService.register(data);
+			const result = await AuthService.register(parsed.data);
 			return res.status(201).json({
 				status: 'success',
 				data: result,
@@ -99,6 +109,18 @@ export class AuthController {
 			});
 		} catch (error: any) {
 			console.error('[Register] Falha ao registar:', error);
+
+			// Corrida entre duas candidaturas simultâneas com o mesmo NIF/email.
+			if (error?.code === 'P2002') {
+				const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(', ') : error?.meta?.target;
+				return res.status(409).json({
+					status: 'error',
+					message: target?.includes('nif')
+						? 'Já existe uma organização registada com este NIF.'
+						: 'Já existe uma conta registada com estes dados.',
+				});
+			}
+
 			return respondWithAuthError(res, error, 400, 'Falha no registro');
 		}
 	}

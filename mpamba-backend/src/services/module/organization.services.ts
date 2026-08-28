@@ -1,6 +1,20 @@
 import { prisma } from "../../config/prisma.config.js";
 import type { CreateOrganizationDto, UpdateOrganizationDto, UpdateOwnOrganizationDto } from "../../shared/dto/organization.dto.js";
 
+/** Erro de negócio: já existe outra organização com o mesmo NIF. */
+export class DuplicateNifError extends Error {
+	constructor() {
+		super("Já existe uma organização registada com este NIF.");
+		this.name = "DuplicateNifError";
+	}
+}
+
+/** Converte campos vazios do formulário em NULL, preservando `undefined`. */
+function blankToNull(value?: string | null): string | null {
+	const trimmed = typeof value === "string" ? value.trim() : value;
+	return trimmed ? trimmed : null;
+}
+
 export class OrganizationService {
 	async findAll(paginationOptions?: { page?: number; pageSize?: number }) {
 		const page = paginationOptions?.page || 1;
@@ -59,13 +73,25 @@ export class OrganizationService {
 	}
 
 	async create(data: CreateOrganizationDto) {
+		// `nif` tem índice único: gravar '' em vez de NULL faz com que apenas a
+		// primeira organização sem NIF seja aceite e todas as seguintes falhem
+		// com violação de unicidade. Campos vazios ficam sempre a NULL.
+		const nif = blankToNull(data.nif);
+
+		if (nif) {
+			const duplicate = await prisma.organization.findUnique({ where: { nif } });
+			if (duplicate) {
+				throw new DuplicateNifError();
+			}
+		}
+
 		return prisma.organization.create({
 			data: {
-				name: data.name,
-				...(data.nif !== undefined && { nif: data.nif }),
-				...(data.address !== undefined && { address: data.address }),
-				...(data.phone !== undefined && { phone: data.phone }),
-				...(data.email !== undefined && data.email !== '' && { email: data.email }),
+				name: data.name.trim(),
+				nif,
+				address: blankToNull(data.address),
+				phone: blankToNull(data.phone),
+				email: blankToNull(data.email),
 				...(data.planId !== undefined && data.planId !== '' && { planId: data.planId }),
 				...(data.isActive !== undefined && { isActive: data.isActive })
 			}
@@ -73,11 +99,22 @@ export class OrganizationService {
 	}
 
 	async update(id: string, data: UpdateOrganizationDto & UpdateOwnOrganizationDto) {
+		// Mesmo motivo do create: um NIF apagado no formulário chega como ''
+		// e colidiria no índice único com outra organização sem NIF.
+		const nif = data.nif !== undefined ? blankToNull(data.nif) : undefined;
+
+		if (nif) {
+			const duplicate = await prisma.organization.findUnique({ where: { nif } });
+			if (duplicate && duplicate.id !== id) {
+				throw new DuplicateNifError();
+			}
+		}
+
 		return prisma.organization.update({
 			where: { id },
 			data: {
 				...(data.name !== undefined && { name: data.name }),
-				...(data.nif !== undefined && { nif: data.nif }),
+				...(data.nif !== undefined && { nif }),
 				...(data.address !== undefined && { address: data.address }),
 				...(data.phone !== undefined && { phone: data.phone }),
 				...(data.email !== undefined && { email: data.email === '' ? null : data.email }),

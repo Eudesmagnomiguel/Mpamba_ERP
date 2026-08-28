@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import OrganizationForm from '@/components/admin/organizations/OrganizationForm';
 import { useOrganization, useUpdateOrganization } from '@/hooks/module/organization';
 import { UpdateOrganizationDto } from '@/shared/dto/organization.dto';
+import { getApiErrorMessage } from '@/shared/utils/api-error.utils';
 
 interface EditOrganizationPageProps {
     params: Promise<{ id: string }>;
@@ -25,8 +26,7 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
             router.push('/admin/organizations');
         } catch (error: any) {
             console.error('Error updating organization:', error);
-            const message = error.response?.data?.message || 'Ocorreu um erro ao atualizar a organização.';
-            toast.error(message);
+            toast.error(getApiErrorMessage(error, 'Ocorreu um erro ao atualizar a organização.'));
         }
     };
 
