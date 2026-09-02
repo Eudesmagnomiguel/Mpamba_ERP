@@ -10,6 +10,9 @@ import payableRoutes from './payable.routes.js';
 import receivableRoutes from './receivable.routes.js';
 import cashSessionRoutes from './cash-session.routes.js';
 import bankStatementRoutes from './bank-statement.routes.js';
+import { movementController } from '../../../controller/module/treasury/movement.controller.js';
+import { permissionGuard } from '../../../shared/utils/rbac/permission.guard.js';
+import { PERMISSIONS } from '../../../shared/utils/rbac/permission.constants.js';
 
 const router = Router();
 
@@ -27,15 +30,24 @@ router.use('/receivables', receivableRoutes);
 router.use('/cash-sessions', cashSessionRoutes);
 router.use('/bank-statements', bankStatementRoutes);
 
-// Retro-compatibility for /income, /expense, /transfer if needed, 
-// but since we are reorganizing, it's better to use /movements/income etc.
-// The original routes were:
-// /treasury/income -> router.post('/income', ...)
-// /treasury/expense -> router.post('/expense', ...)
-// /treasury/transfer -> router.post('/transfer', ...)
-// /treasury/movements -> router.get('/movements', ...)
-
-// To maintain compatibility with the EXACT previous paths:
-router.use('/', movementRoutes); 
+// Retro-compatibilidade com os caminhos antigos (/treasury/income, /expense,
+// /transfer). Montados um a um em vez de `router.use('/', movementRoutes)`,
+// porque o router de movimentos passou a ter rotas `/:id` que apanhariam
+// qualquer caminho não resolvido pelos routers acima.
+router.post(
+	'/income',
+	permissionGuard(PERMISSIONS.TREASURY_TRANSACTION_CREATE) as any,
+	(req, res) => movementController.addIncome(req as any, res)
+);
+router.post(
+	'/expense',
+	permissionGuard(PERMISSIONS.TREASURY_TRANSACTION_CREATE) as any,
+	(req, res) => movementController.addExpense(req as any, res)
+);
+router.post(
+	'/transfer',
+	permissionGuard(PERMISSIONS.TREASURY_TRANSFER_CREATE) as any,
+	(req, res) => movementController.transfer(req as any, res)
+);
 
 export default router;

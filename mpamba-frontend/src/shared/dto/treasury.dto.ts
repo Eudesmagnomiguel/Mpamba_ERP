@@ -28,7 +28,7 @@ export const UpdateFinancialCategorySchema = z.object({
 });
 
 export const CreateMovementSchema = z.object({
-	accountId: z.string().uuid('Conta inválida'),
+	accountId: z.string().min(1, 'Selecione a conta').uuid('Conta inválida'),
 	type: z.enum(['ENTRADA', 'SAIDA']),
 	amount: z.number().positive('Valor deve ser maior que zero'),
 	date: z.string().optional(),
@@ -38,13 +38,18 @@ export const CreateMovementSchema = z.object({
 });
 
 export const CreateTransferSchema = z.object({
-	originAccountId: z.string().uuid('Conta de origem inválida'),
-	destinationAccountId: z.string().uuid('Conta de destino inválida'),
+	originAccountId: z.string().min(1, 'Selecione a conta de origem').uuid('Conta de origem inválida'),
+	destinationAccountId: z.string().min(1, 'Selecione a conta de destino').uuid('Conta de destino inválida'),
 	amount: z.number().positive('Valor deve ser maior que zero'),
 	date: z.string().optional(),
-	description: z.string().min(2, 'Descrição é obrigatória').optional(),
+	// Opcional: o backend gera uma descrição por omissão. Não pode exigir um
+	// mínimo, senão o formulário bloqueia com o valor inicial vazio.
+	description: z.string().optional(),
 	reference: z.string().optional(),
-});
+}).refine(
+	(data) => data.originAccountId !== data.destinationAccountId,
+	{ message: 'As contas de origem e destino devem ser diferentes', path: ['destinationAccountId'] }
+);
 
 export const CreateCostCenterSchema = z.object({
 	name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),

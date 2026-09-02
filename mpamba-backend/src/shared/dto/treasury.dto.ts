@@ -7,21 +7,51 @@ export const createAccountSchema = z.object({
 	allowNegative: z.boolean().default(false),
 });
 
+/** Campos vindos de formulários chegam como '' quando não preenchidos. */
+const emptyToUndefined = (value: unknown) => (value === '' || value === null ? undefined : value);
+const emptyToNull = (value: unknown) => (value === '' || value === 'none' || value === undefined ? null : value);
+
+const optionalDate = z.preprocess(emptyToUndefined, z.coerce.date().optional());
+const optionalText = z.preprocess(emptyToUndefined, z.string().optional());
+const optionalId = z.preprocess(emptyToNull, z.string().min(1).nullable());
+
 export const addMovementSchema = z.object({
 	accountId: z.string().min(1, 'Conta é obrigatória'),
 	amount: z.number().positive('Valor deve ser positivo'),
-	categoryId: z.string().min(1, 'Categoria é obrigatória'),
+	categoryId: optionalId.optional(),
 	description: z.string().min(1, 'Descrição é obrigatória'),
-	reference: z.string().optional(),
-	date: z.date().optional(),
+	reference: optionalText,
+	date: optionalDate,
 });
 
-export const transferSchema = z.object({
-	fromAccountId: z.string().min(1, 'Conta de origem é obrigatória'),
-	toAccountId: z.string().min(1, 'Conta de destino é obrigatória'),
-	amount: z.number().positive('Valor deve ser positivo'),
-	description: z.string().optional(),
+/** Usado pelo endpoint único `POST /treasury/movements`, onde o tipo vem no corpo. */
+export const createMovementSchema = addMovementSchema.extend({
+	type: z.enum(['ENTRADA', 'SAIDA']),
 });
+
+/**
+ * Aceita os nomes usados pelo frontend (`originAccountId`/`destinationAccountId`)
+ * e mantém compatibilidade com os antigos (`fromAccountId`/`toAccountId`).
+ */
+export const transferSchema = z.preprocess(
+	(value) => {
+		if (!value || typeof value !== 'object') return value;
+		const raw = value as Record<string, unknown>;
+		return {
+			...raw,
+			originAccountId: raw.originAccountId ?? raw.fromAccountId,
+			destinationAccountId: raw.destinationAccountId ?? raw.toAccountId,
+		};
+	},
+	z.object({
+		originAccountId: z.string().min(1, 'Conta de origem é obrigatória'),
+		destinationAccountId: z.string().min(1, 'Conta de destino é obrigatória'),
+		amount: z.number().positive('Valor deve ser positivo'),
+		description: optionalText,
+		reference: optionalText,
+		date: optionalDate,
+	})
+);
 
 export const createCategorySchema = z.object({
 	name: z.string().min(1, 'Nome da categoria é obrigatório'),
@@ -63,6 +93,7 @@ export const manualMatchSchema = z.object({
 
 export type CreateAccountDto = z.infer<typeof createAccountSchema>;
 export type AddMovementDto = z.infer<typeof addMovementSchema>;
+export type CreateMovementDto = z.infer<typeof createMovementSchema>;
 export type TransferDto = z.infer<typeof transferSchema>;
 export type CreateCategoryDto = z.infer<typeof createCategorySchema>;
 export type OpenCashSessionDto = z.infer<typeof openCashSessionSchema>;

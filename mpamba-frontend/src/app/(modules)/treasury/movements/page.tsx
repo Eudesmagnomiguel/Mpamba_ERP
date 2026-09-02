@@ -92,33 +92,42 @@ export default function MovementsPage() {
 
 	const movementForm = useForm<CreateMovementDto>({
 		resolver: zodResolver(CreateMovementSchema),
-		defaultValues: { type: 'ENTRADA', amount: 0, description: '' },
+		defaultValues: { type: 'ENTRADA', accountId: '', amount: 0, description: '', reference: '', date: '', categoryId: null },
 	});
 
 	const transferForm = useForm<CreateTransferDto>({
 		resolver: zodResolver(CreateTransferSchema),
-		defaultValues: { amount: 0, description: '' },
+		defaultValues: { originAccountId: '', destinationAccountId: '', amount: 0, description: '', date: '' },
 	});
+
+	/** Remove campos vazios para não enviar '' onde o backend espera uma data/id. */
+	const clean = <T extends Record<string, unknown>>(data: T) =>
+		Object.fromEntries(
+			Object.entries(data).filter(([, value]) => value !== '' && value !== undefined)
+		) as T;
+
+	const errorMessage = (err: unknown, fallback: string) =>
+		(err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 
 	const handleMovementSubmit = movementForm.handleSubmit(async (data) => {
 		try {
-			await createMovement.mutateAsync(data);
+			await createMovement.mutateAsync(clean(data));
 			toast.success('Movimento registado com sucesso!');
 			setIsMovementOpen(false);
 			movementForm.reset();
-		} catch {
-			toast.error('Erro ao registar o movimento.');
+		} catch (err) {
+			toast.error(errorMessage(err, 'Erro ao registar o movimento.'));
 		}
 	});
 
 	const handleTransferSubmit = transferForm.handleSubmit(async (data) => {
 		try {
-			await createTransfer.mutateAsync(data);
+			await createTransfer.mutateAsync(clean(data));
 			toast.success('Transferência realizada com sucesso!');
 			setIsTransferOpen(false);
 			transferForm.reset();
-		} catch {
-			toast.error('Erro ao realizar a transferência.');
+		} catch (err) {
+			toast.error(errorMessage(err, 'Erro ao realizar a transferência.'));
 		}
 	});
 
@@ -126,8 +135,8 @@ export default function MovementsPage() {
 		try {
 			await deleteMovement.mutateAsync(id);
 			toast.success('Movimento eliminado.');
-		} catch {
-			toast.error('Erro ao eliminar o movimento.');
+		} catch (err) {
+			toast.error(errorMessage(err, 'Erro ao eliminar o movimento.'));
 		}
 	};
 
