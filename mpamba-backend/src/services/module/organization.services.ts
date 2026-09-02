@@ -9,6 +9,20 @@ export class DuplicateNifError extends Error {
 	}
 }
 
+/** Erro de negócio: o plano indicado no formulário não existe. */
+export class PlanNotFoundError extends Error {
+	constructor() {
+		super("O plano indicado não existe.");
+		this.name = "PlanNotFoundError";
+	}
+}
+
+/** Duração, em meses, da subscrição criada ao atribuir um plano no backoffice. */
+const SUBSCRIPTION_MONTHS = 12;
+
+/** Cliente Prisma dentro de uma transação. */
+type PrismaTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /** Converte campos vazios do formulário em NULL, preservando `undefined`. */
 function blankToNull(value?: string | null): string | null {
 	const trimmed = typeof value === "string" ? value.trim() : value;
@@ -57,8 +71,21 @@ export class OrganizationService {
 		return prisma.organization.findUnique({
 			where: { id },
 			include: {
+				// Só os módulos realmente ativos: as mudanças de plano e o
+				// cancelamento desativam as linhas em vez de as apagar, e um
+				// módulo desativado não pode aparecer no perfil como contratado.
 				modules: {
+					where: { isActive: true },
 					include: { module: true }
+				},
+				// Sem `plan` e `subscription` o perfil da empresa não tinha como
+				// mostrar o plano nem o estado da subscrição, mesmo quando ambos
+				// estavam corretamente gravados.
+				plan: {
+					include: { modules: { include: { module: true } } }
+				},
+				subscription: {
+					include: { plan: true }
 				},
 				users: {
 					select: {
@@ -70,6 +97,54 @@ export class OrganizationService {
 				}
 			}
 		});
+	}
+
+	/**
+	 * Cria/atualiza a subscrição da organização e sincroniza os seus módulos
+	 * com os do plano.
+	 *
+	 * `Organization.planId` e a tabela `Subscription` são coisas distintas:
+	 * sem este passo, escolher um plano no backoffice gravava apenas o primeiro
+	 * e não havia linha em `Subscription` nem em `OrganizationModule`. O
+	 * resultado era a empresa ficar com plano na lista mas sem estado de
+	 * subscrição, e com todos os módulos fechados pelos guards.
+	 */
+	private async provisionPlan(tx: PrismaTransaction, organizationId: string, planId: string) {
+		const plan = await tx.plan.findUnique({
+			where: { id: planId },
+			include: { modules: true }
+		});
+
+		if (!plan) {
+			throw new PlanNotFoundError();
+		}
+
+		const startDate = new Date();
+		const endDate = new Date(startDate);
+		endDate.setMonth(endDate.getMonth() + SUBSCRIPTION_MONTHS);
+
+		await tx.subscription.upsert({
+			where: { organizationId },
+			update: { planId, status: 'ACTIVE', startDate, endDate },
+			create: { organizationId, planId, status: 'ACTIVE', startDate, endDate }
+		});
+
+		// Desativa tudo antes de reativar: numa descida de plano, os módulos que
+		// deixaram de estar incluídos têm mesmo de sair.
+		await tx.organizationModule.updateMany({
+			where: { organizationId },
+			data: { isActive: false }
+		});
+
+		for (const planModule of plan.modules) {
+			await tx.organizationModule.upsert({
+				where: {
+					organizationId_moduleId: { organizationId, moduleId: planModule.moduleId }
+				},
+				update: { isActive: true },
+				create: { organizationId, moduleId: planModule.moduleId, isActive: true }
+			});
+		}
 	}
 
 	async create(data: CreateOrganizationDto) {
@@ -85,16 +160,26 @@ export class OrganizationService {
 			}
 		}
 
-		return prisma.organization.create({
-			data: {
-				name: data.name.trim(),
-				nif,
-				address: blankToNull(data.address),
-				phone: blankToNull(data.phone),
-				email: blankToNull(data.email),
-				...(data.planId !== undefined && data.planId !== '' && { planId: data.planId }),
-				...(data.isActive !== undefined && { isActive: data.isActive })
+		const planId = data.planId !== undefined && data.planId !== '' ? data.planId : null;
+
+		return prisma.$transaction(async (tx) => {
+			const organization = await tx.organization.create({
+				data: {
+					name: data.name.trim(),
+					nif,
+					address: blankToNull(data.address),
+					phone: blankToNull(data.phone),
+					email: blankToNull(data.email),
+					...(planId && { planId }),
+					...(data.isActive !== undefined && { isActive: data.isActive })
+				}
+			});
+
+			if (planId) {
+				await this.provisionPlan(tx, organization.id, planId);
 			}
+
+			return organization;
 		});
 	}
 
@@ -110,7 +195,18 @@ export class OrganizationService {
 			}
 		}
 
-		return prisma.organization.update({
+		const planId = data.planId !== undefined ? (data.planId === '' ? null : data.planId) : undefined;
+
+		return prisma.$transaction(async (tx) => {
+			// Estado anterior, para só reprovisionar quando o plano muda de facto.
+			// Guardar o formulário sem lhe tocar não pode renovar a subscrição
+			// nem reativar uma organização suspensa.
+			const [previous, existingSubscription] = await Promise.all([
+				tx.organization.findUnique({ where: { id }, select: { planId: true } }),
+				tx.subscription.findUnique({ where: { organizationId: id }, select: { id: true } })
+			]);
+
+			const organization = await tx.organization.update({
 			where: { id },
 			data: {
 				...(data.name !== undefined && { name: data.name }),
@@ -138,6 +234,16 @@ export class OrganizationService {
 				...(data.retentionEntity !== undefined && { retentionEntity: data.retentionEntity === '' ? null : data.retentionEntity }),
 				...(data.retentionRate !== undefined && { retentionRate: data.retentionRate })
 			}
+			});
+
+			// Reprovisiona quando o plano muda, e também quando ainda não existe
+			// subscrição — é isso que repara as organizações criadas antes desta
+			// correção, que ficaram com `planId` mas sem subscrição nem módulos.
+			if (planId && (planId !== previous?.planId || !existingSubscription)) {
+				await this.provisionPlan(tx, id, planId);
+			}
+
+			return organization;
 		});
 	}
 
@@ -210,21 +316,29 @@ export class OrganizationService {
 		});
 	}
 
+	/**
+	 * `upsert` e não `create`: as mudanças de plano e o cancelamento desativam
+	 * a linha em vez de a apagar, pelo que reativar um módulo que a organização
+	 * já teve rebentava com violação de chave única em vez de o reativar.
+	 */
 	async assignModule(organizationId: string, moduleId: string) {
-		return prisma.organizationModule.create({
-			data: {
-				organizationId,
-				moduleId
-			}
+		return prisma.organizationModule.upsert({
+			where: {
+				organizationId_moduleId: { organizationId, moduleId }
+			},
+			update: { isActive: true },
+			create: { organizationId, moduleId, isActive: true }
 		});
 	}
 
+	/** Desativa em vez de apagar, para ser coerente com o resto do sistema. */
 	async removeModule(organizationId: string, moduleId: string) {
-		return prisma.organizationModule.deleteMany({
+		return prisma.organizationModule.updateMany({
 			where: {
 				organizationId,
 				moduleId
-			}
+			},
+			data: { isActive: false }
 		});
 	}
 }

@@ -14,8 +14,13 @@ vi.mock('../../src/config/prisma.config.js', () => ({
 		},
 		organizationModule: {
 			findFirst: vi.fn(),
+			findMany: vi.fn(),
 			updateMany: vi.fn(),
 			upsert: vi.fn(),
+		},
+		organization: {
+			findUnique: vi.fn(),
+			update: vi.fn(),
 		},
 		activationCode: {
 			findFirst: vi.fn(),
@@ -77,12 +82,17 @@ describe('SubscriptionService', () => {
 				plan: { name: 'Pro' }
 			};
 			(prisma.subscription.findUnique as any).mockResolvedValue(mockSubscription);
+			// Os módulos mostrados vêm de OrganizationModule, não do template do plano.
+			(prisma.organizationModule.findMany as any).mockResolvedValue([
+				{ module: { id: 'mod-1', code: 'faturacao', name: 'Faturação' } }
+			]);
 
 			const result = await SubscriptionService.checkSubscriptionStatus('org-1');
 
 			expect(result.active).toBe(true);
 			expect(result.status).toBe('ACTIVE');
 			expect(result.plan).toBeDefined();
+			expect(result.plan?.modules).toEqual([{ id: 'mod-1', code: 'faturacao', name: 'Faturação' }]);
 		});
 	});
 
@@ -151,22 +161,51 @@ describe('SubscriptionService', () => {
 	});
 
 	describe('changeSubscriptionPlan', () => {
-		it('deve atualizar o plano e provisionar módulos', async () => {
-			const mockSubscription = { organizationId: 'org-1', organization: { name: 'Test' }, plan: { name: 'Old' } };
-			const mockPlan = { id: 'plan-2', name: 'New Plan', modules: [{ moduleId: 'mod-2' }] };
+		const mockPlan = { id: 'plan-2', name: 'New Plan', modules: [{ moduleId: 'mod-2' }] };
 
-			(prisma.subscription.findUnique as any).mockResolvedValue(mockSubscription);
+		beforeEach(() => {
 			(prisma.plan.findUnique as any).mockResolvedValue(mockPlan);
-			(prisma.subscription.update as any).mockResolvedValue({ status: 'ACTIVE' });
+			(prisma.organization.findUnique as any).mockResolvedValue({ id: 'org-1', name: 'Test' });
+			(prisma.subscription.upsert as any).mockResolvedValue({ status: 'ACTIVE' });
+		});
+
+		it('deve atualizar o plano e provisionar módulos', async () => {
+			(prisma.subscription.findUnique as any).mockResolvedValue({
+				organizationId: 'org-1', organization: { name: 'Test' }, plan: { name: 'Old' }
+			});
 
 			await SubscriptionService.changeSubscriptionPlan('org-1', 'plan-2');
 
-			expect(prisma.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
+			expect(prisma.subscription.upsert).toHaveBeenCalledWith(expect.objectContaining({
 				where: { organizationId: 'org-1' },
-				data: expect.objectContaining({ planId: 'plan-2' })
+				update: expect.objectContaining({ planId: 'plan-2' })
 			}));
 			expect(prisma.organizationModule.updateMany).toHaveBeenCalled();
 			expect(prisma.organizationModule.upsert).toHaveBeenCalled();
+		});
+
+		// Organizações criadas no backoffice ficavam com `Organization.planId`
+		// mas sem linha em `Subscription`, e o antigo `update` rebentava aqui.
+		it('deve criar a subscrição quando a organização ainda não tem nenhuma', async () => {
+			(prisma.subscription.findUnique as any).mockResolvedValue(null);
+
+			await SubscriptionService.changeSubscriptionPlan('org-1', 'plan-2');
+
+			expect(prisma.subscription.upsert).toHaveBeenCalledWith(expect.objectContaining({
+				create: expect.objectContaining({ organizationId: 'org-1', planId: 'plan-2', status: 'ACTIVE' })
+			}));
+			expect(prisma.organizationModule.upsert).toHaveBeenCalled();
+		});
+
+		it('deve manter Organization.planId em sincronia com a subscrição', async () => {
+			(prisma.subscription.findUnique as any).mockResolvedValue(null);
+
+			await SubscriptionService.changeSubscriptionPlan('org-1', 'plan-2');
+
+			expect(prisma.organization.update).toHaveBeenCalledWith({
+				where: { id: 'org-1' },
+				data: { planId: 'plan-2' }
+			});
 		});
 	});
 

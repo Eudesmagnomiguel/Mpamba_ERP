@@ -114,6 +114,13 @@ export class SubscriptionService {
 				}
 			});
 
+			// 2.1 Manter `Organization.planId` em sincronia com a subscrição: é de
+			// lá que a lista do backoffice lê a coluna "Plano".
+			await tx.organization.update({
+				where: { id: organizationId },
+				data: { planId: activationCode.planId }
+			});
+
 			// 3. Ativar/Atualizar Módulos da Organização baseados no Plano
 			await tx.organizationModule.updateMany({
 				where: { organizationId },
@@ -330,16 +337,17 @@ export class SubscriptionService {
 	 * 👨‍💼 SUPER ADMIN - Muda o plano de uma subscrição
 	 */
 	static async changeSubscriptionPlan(organizationId: string, newPlanId: string) {
-		const [subscription, newPlan] = await Promise.all([
+		const [subscription, newPlan, organization] = await Promise.all([
 			prisma.subscription.findUnique({ where: { organizationId }, include: { organization: true, plan: true } }),
 			prisma.plan.findUnique({
 				where: { id: newPlanId },
 				include: { modules: { include: { module: true } } }
-			})
+			}),
+			prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true } })
 		]);
 
-		if (!subscription) {
-			throw new Error('Subscrição não encontrada');
+		if (!organization) {
+			throw new Error('Organização não encontrada');
 		}
 
 		if (!newPlan) {
@@ -347,14 +355,36 @@ export class SubscriptionService {
 		}
 
 		return prisma.$transaction(async (tx) => {
-			// 1. Atualizar subscrição
-			const updated = await tx.subscription.update({
+			// 1. Criar ou atualizar a subscrição.
+			// `upsert` e não `update`: organizações a quem foi atribuído um plano
+			// no backoffice ficam com `Organization.planId` sem linha em
+			// `Subscription`, e o `update` rebentava com "Subscrição não
+			// encontrada" — deixando-as sem forma de receber a subscrição.
+			const startDate = new Date();
+			const endDate = new Date(startDate);
+			endDate.setMonth(endDate.getMonth() + 12);
+
+			const updated = await tx.subscription.upsert({
 				where: { organizationId },
-				data: {
+				update: {
 					planId: newPlanId,
 					status: 'ACTIVE'
 				},
+				create: {
+					organizationId,
+					planId: newPlanId,
+					status: 'ACTIVE',
+					startDate,
+					endDate
+				},
 				include: { organization: true, plan: true }
+			});
+
+			// 1.1 Manter `Organization.planId` em sincronia: é de lá que a lista
+			// do backoffice lê a coluna "Plano".
+			await tx.organization.update({
+				where: { id: organizationId },
+				data: { planId: newPlanId }
 			});
 
 			// 2. Atualizar módulos da organização
@@ -380,7 +410,7 @@ export class SubscriptionService {
 				});
 			}
 
-			console.log(`[Subscription] Plan changed for ${subscription.organization.name} from ${subscription.plan.name} to ${newPlan.name}`);
+			console.log(`[Subscription] Plan changed for ${organization.name} from ${subscription?.plan.name ?? 'sem plano'} to ${newPlan.name}`);
 
 			return updated;
 		}).then(async (updated) => {

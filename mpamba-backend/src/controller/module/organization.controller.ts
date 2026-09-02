@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { AuthRequest } from "../../middleware/auth.middleware.js";
-import { organizationService, DuplicateNifError } from "../../services/module/organization.services.js";
+import { organizationService, DuplicateNifError, PlanNotFoundError } from "../../services/module/organization.services.js";
 import { createOrganizationSchema, updateOrganizationSchema, updateOwnOrganizationSchema, updateOrganizationLogoSchema } from "../../shared/dto/organization.dto.js";
 
 /**
@@ -24,6 +24,10 @@ function respondWithOrganizationError(res: Response, error: any, fallback: strin
 				? error.message
 				: `Já existe uma organização com o mesmo valor no campo ${target || "único"}.`;
 		return res.status(409).json({ error: message, message });
+	}
+
+	if (error instanceof PlanNotFoundError) {
+		return res.status(400).json({ error: error.message, message: error.message });
 	}
 
 	if (error?.code === "P2025") {
