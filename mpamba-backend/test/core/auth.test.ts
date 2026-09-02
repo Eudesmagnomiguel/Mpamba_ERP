@@ -7,9 +7,14 @@ import { prisma } from '../../src/config/prisma.config.js';
 vi.mock('../../src/config/prisma.config.js', () => ({
 	prisma: {
 		user: {
+			// O login aceita email ou username, daí `findFirst`.
+			findFirst: vi.fn(),
 			findUnique: vi.fn(),
 			create: vi.fn(),
 			updateMany: vi.fn(),
+		},
+		userModule: {
+			findMany: vi.fn(),
 		},
 		role: {
 			findFirst: vi.fn(),
@@ -40,6 +45,7 @@ vi.mock('../../src/config/prisma.config.js', () => ({
 		permission: {
 			findMany: vi.fn(),
 		},
+		$transaction: vi.fn(),
 	},
 }));
 
@@ -104,7 +110,7 @@ describe('AuthService', () => {
 				}
 			};
 
-			(prisma.user.findUnique as any).mockResolvedValue(mockUser);
+			(prisma.user.findFirst as any).mockResolvedValue(mockUser);
 			(prisma.organizationModule.findMany as any).mockResolvedValue([
 				{ code: 'billing' }
 			]);
@@ -118,7 +124,7 @@ describe('AuthService', () => {
 		});
 
 		it('deve lançar erro se as credenciais forem inválidas (usuário não existe)', async () => {
-			(prisma.user.findUnique as any).mockResolvedValue(null);
+			(prisma.user.findFirst as any).mockResolvedValue(null);
 
 			await expect(AuthService.login('nonexistent@example.com', 'any'))
 				.rejects.toThrow('Credenciais inválidas');
@@ -129,7 +135,7 @@ describe('AuthService', () => {
 				email: 'test@example.com',
 				passwordHash: bcrypt.hashSync('correct-password', 10)
 			};
-			(prisma.user.findUnique as any).mockResolvedValue(mockUser);
+			(prisma.user.findFirst as any).mockResolvedValue(mockUser);
 
 			await expect(AuthService.login('test@example.com', 'wrong-password'))
 				.rejects.toThrow('Credenciais inválidas');
@@ -141,7 +147,7 @@ describe('AuthService', () => {
 				passwordHash: bcrypt.hashSync('pass', 10),
 				isActive: false
 			};
-			(prisma.user.findUnique as any).mockResolvedValue(mockUser);
+			(prisma.user.findFirst as any).mockResolvedValue(mockUser);
 
 			await expect(AuthService.login('inactive@example.com', 'pass'))
 				.rejects.toThrow('Sua conta está inativa');
@@ -157,7 +163,7 @@ describe('AuthService', () => {
 					isActive: false
 				}
 			};
-			(prisma.user.findUnique as any).mockResolvedValue(mockUser);
+			(prisma.user.findFirst as any).mockResolvedValue(mockUser);
 
 			await expect(AuthService.login('test@org.com', 'pass'))
 				.rejects.toThrow('Sua organização está pendente de aprovação');
@@ -174,7 +180,7 @@ describe('AuthService', () => {
 				organization: null
 			};
 
-			(prisma.user.findUnique as any).mockResolvedValue(mockSuperAdmin);
+			(prisma.user.findFirst as any).mockResolvedValue(mockSuperAdmin);
 			(prisma.module.findMany as any).mockResolvedValue([{ code: 'billing' }, { code: 'stock' }]);
 
 			const result = await AuthService.login('admin@mpamba.com', 'admin123');
@@ -214,16 +220,27 @@ describe('AuthService', () => {
 
 		it('deve registar uma nova organização e administrador pendentes', async () => {
 			(prisma.user.findUnique as any).mockResolvedValue(null);
+			(prisma.organization.findUnique as any).mockResolvedValue(null);
+			(prisma.permission.findMany as any).mockResolvedValue([]);
 			(prisma.plan.findUnique as any).mockResolvedValue({ id: 'plan-1', name: 'Plano Pro' });
-			(prisma.organization.create as any).mockResolvedValue({ id: 'org-new', name: 'Nova Org' });
-			(prisma.user.create as any).mockResolvedValue({ id: 'user-new', name: 'Admin' });
 			(prisma.role.findFirst as any).mockResolvedValue({ id: 'role-1' });
+
+			// O registo corre todo dentro de uma transacção.
+			const tx = {
+				organization: { create: vi.fn().mockResolvedValue({ id: 'org-new', name: 'Nova Org' }) },
+				user: { create: vi.fn().mockResolvedValue({ id: 'user-new', name: 'Admin' }) },
+				role: { create: vi.fn().mockResolvedValue({ id: 'role-1' }) },
+				userRole: { create: vi.fn().mockResolvedValue({}) },
+			};
+			(prisma.$transaction as any).mockImplementation((fn: any) => fn(tx));
 
 			const result = await AuthService.register(registerData);
 
 			expect(result.message).toContain('sucesso');
-			expect(prisma.organization.create).toHaveBeenCalled();
-			expect(prisma.user.create).toHaveBeenCalled();
+			expect(tx.organization.create).toHaveBeenCalled();
+			expect(tx.user.create).toHaveBeenCalled();
+			// A organização nasce pendente de aprovação.
+			expect(tx.organization.create.mock.calls[0][0].data.isActive).toBe(false);
 		});
 
 		it('deve impedir registo se o email já existir', async () => {

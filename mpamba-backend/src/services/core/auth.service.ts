@@ -7,7 +7,7 @@ import { sendEmail } from '../../shared/utils/email.utils.js';
 import { JwtStrategy } from '../../shared/utils/jwt.strategy.js';
 import { RefreshStrategy } from '../../shared/utils/refresh.strategy.js';
 import type { RegisterInput } from '../../shared/schema/auth.schema.js';
-import type { LoginResponse, RefreshTokenResponse } from '../../shared/types/core/auth.types.js';
+import type { AuthUser, LoginResponse, RefreshTokenResponse } from '../../shared/types/core/auth.types.js';
 import {
 	getSubscriptionApprovedTemplate,
 	getOrganizationActivatedTemplate
@@ -117,6 +117,60 @@ export class AuthService {
 
 		const roles = user.roles.map((r: any) => r.role.name);
 
+		const accessToken = JwtStrategy.sign({
+			sub: user.id,
+			organizationId: user.organizationId,
+			roles,
+		});
+
+		const refreshToken = RefreshStrategy.sign({ sub: user.id });
+
+		// Login successful
+
+		return {
+			accessToken,
+			refreshToken,
+			user: await AuthService.buildUserProfile(user),
+		};
+	}
+
+	/** Tudo o que o perfil do utilizador precisa de carregar numa só query. */
+	private static readonly profileInclude = {
+		roles: {
+			include: {
+				role: {
+					include: {
+						permissions: { include: { permission: true } }
+					}
+				}
+			}
+		},
+		organization: true,
+	} as const;
+
+	/**
+	 * Perfil actual do utilizador: papéis, permissões e módulos activos.
+	 *
+	 * Os módulos não vão no JWT — são lidos da base de dados a cada chamada.
+	 * É isto que permite ao frontend refrescar o acesso depois de o backoffice
+	 * activar uma subscrição, sem o utilizador ter de sair e voltar a entrar.
+	 */
+	static async getProfile(userId: string): Promise<AuthUser> {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			include: AuthService.profileInclude,
+		});
+
+		if (!user) {
+			throw new Error('Utilizador não encontrado');
+		}
+
+		return AuthService.buildUserProfile(user);
+	}
+
+	private static async buildUserProfile(user: any): Promise<AuthUser> {
+		const roles = user.roles.map((r: any) => r.role.name);
+
 		// Extract unique permissions from all roles
 		const permissions = new Set<string>();
 		user.roles.forEach((userRole: any) => {
@@ -155,35 +209,21 @@ export class AuthService {
 			moduleCodes = moduleCodes.filter((code: string) => assignedCodes.has(code));
 		}
 
-		const accessToken = JwtStrategy.sign({
-			sub: user.id,
-			organizationId: user.organizationId,
-			roles,
-		});
-
-		const refreshToken = RefreshStrategy.sign({ sub: user.id });
-
-		// Login successful
-
 		return {
-			accessToken,
-			refreshToken,
-			user: {
-				id: user.id,
-				name: user.name,
-				email: user.email,
-				username: user.username,
-				role: roles[0] || 'user',
-				permissions: Array.from(permissions),
-				modules: moduleCodes,
-				organizationId: user.organizationId,
-				organization: user.organization ? {
-					id: user.organization.id,
-					name: user.organization.name,
-					nif: user.organization.nif,
-				} : null,
-				onboardingCompletedAt: user.onboardingCompletedAt ? user.onboardingCompletedAt.toISOString() : null,
-			},
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			username: user.username,
+			role: roles[0] || 'user',
+			permissions: Array.from(permissions),
+			modules: moduleCodes,
+			organizationId: user.organizationId,
+			organization: user.organization ? {
+				id: user.organization.id,
+				name: user.organization.name,
+				nif: user.organization.nif,
+			} : null,
+			onboardingCompletedAt: user.onboardingCompletedAt ? user.onboardingCompletedAt.toISOString() : null,
 		};
 	}
 

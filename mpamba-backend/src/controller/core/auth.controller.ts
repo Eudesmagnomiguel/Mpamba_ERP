@@ -184,9 +184,15 @@ export class AuthController {
 				});
 			}
 
+			// Perfil lido da base de dados, não o payload do JWT: os módulos e as
+			// permissões mudam quando o backoffice altera a subscrição, e o token
+			// só é reemitido no login. Sem isto, o utilizador teria de sair e
+			// voltar a entrar para ver um módulo acabado de activar.
+			const user = await AuthService.getProfile(req.user.sub);
+
 			return res.status(200).json({
 				status: 'success',
-				data: req.user,
+				data: user,
 				message: 'Dados do utilizador obtidos com sucesso'
 			});
 		} catch (error: any) {

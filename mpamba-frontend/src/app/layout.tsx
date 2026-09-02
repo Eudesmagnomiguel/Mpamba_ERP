@@ -4,6 +4,7 @@ import "@/assets/styles/globals.css";
 import { cn } from "@/lib/utils";
 import QueryProvider from "@/providers/QueryProvider";
 import { ModuleProvider } from "@/providers/ModuleProvider";
+import { SessionSync } from "@/providers/SessionSync";
 import { Toaster } from "sonner";
 
 // Karla: corpo de texto — geométrica, amigável, muito legível em tabelas.
@@ -39,6 +40,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <QueryProvider>
+          <SessionSync />
           <ModuleProvider>
             {children}
           </ModuleProvider>
