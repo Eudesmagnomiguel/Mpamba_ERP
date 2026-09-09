@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
 	ListTree,
@@ -51,16 +51,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateAccountingAccountSchema, CreateAccountingAccountDto, UpdateAccountingAccountDto } from '@/shared/dto/accounting.dto';
 import { AccountingAccount } from '@/shared/types/accounting.types';
+import { compareAccountCodes } from '@/shared/utils/accounting.utils';
 import { toast } from 'sonner';
 
+// Classes do PGC-Angola (Decreto n.º 82/01 de 16 de Novembro). A ordem das
+// classes é a do decreto, que a trocou face ao plano anterior.
 const CLASS_LABELS: Record<number, string> = {
-	1: 'Meios Monetários',
-	2: 'Terceiros',
-	3: 'Existências',
-	4: 'Imobilizações',
-	5: 'Capital, Reservas e Resultados',
-	6: 'Custos e Perdas',
-	7: 'Proveitos e Ganhos',
+	1: 'Meios Fixos e Investimentos',
+	2: 'Existências',
+	3: 'Terceiros',
+	4: 'Meios Monetários',
+	5: 'Capital e Reservas',
+	6: 'Proveitos e Ganhos por Natureza',
+	7: 'Custos e Perdas por Natureza',
 	8: 'Resultados',
 };
 
@@ -85,10 +88,18 @@ export default function AccountingAccountsPage() {
 
 	const createForm = useForm<CreateAccountingAccountDto>({
 		resolver: zodResolver(CreateAccountingAccountSchema),
-		defaultValues: { class: 1, side: 'ATIVO' },
+		defaultValues: { side: 'ATIVO' },
 	});
 
 	const editForm = useForm<UpdateAccountingAccountDto>();
+
+	// No PGC a classe é sempre o primeiro dígito do código (34.5.3 → classe 3),
+	// por isso é derivada e não escolhida, para não poder contradizer o código.
+	const codeValue = createForm.watch('code');
+	const derivedClass = codeValue && /^[1-8]/.test(codeValue) ? Number(codeValue[0]) : undefined;
+	useEffect(() => {
+		if (derivedClass) createForm.setValue('class', derivedClass);
+	}, [derivedClass, createForm]);
 
 	const filtered = useMemo(() => {
 		const list = accounts || [];
@@ -112,7 +123,7 @@ export default function AccountingAccountsPage() {
 			await createAccount.mutateAsync(data);
 			toast.success('Conta criada com sucesso!');
 			setIsCreateOpen(false);
-			createForm.reset({ class: 1, side: 'ATIVO' });
+			createForm.reset({ side: 'ATIVO' });
 		} catch (err: any) {
 			toast.error(err?.response?.data?.message || 'Erro ao criar a conta.');
 		}
@@ -188,7 +199,7 @@ export default function AccountingAccountsPage() {
 								<span className="text-xs font-bold text-slate-700 uppercase tracking-wider">{CLASS_LABELS[classNum] || `Classe ${classNum}`}</span>
 							</div>
 							<div className="divide-y divide-slate-100">
-								{list.sort((a, b) => a.code.localeCompare(b.code)).map((acc) => (
+								{[...list].sort((a, b) => compareAccountCodes(a.code, b.code)).map((acc) => (
 									<div key={acc.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/50 transition-colors">
 										<div className="flex items-center gap-3 min-w-0">
 											<span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm shrink-0">{acc.code}</span>
@@ -251,21 +262,14 @@ export default function AccountingAccountsPage() {
 						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-1.5">
 								<label className="text-xs font-semibold text-slate-700">Código *</label>
-								<Input placeholder="Ex: 213" className="h-10 border-slate-200 rounded-sm text-sm" {...createForm.register('code')} />
+								<Input placeholder="Ex: 34.5.3" className="h-10 border-slate-200 rounded-sm text-sm" {...createForm.register('code')} />
 								{createForm.formState.errors.code && <p className="text-[10px] text-rose-500">{createForm.formState.errors.code.message}</p>}
 							</div>
 							<div className="space-y-1.5">
-								<label className="text-xs font-semibold text-slate-700">Classe *</label>
-								<Select defaultValue="1" onValueChange={(v) => createForm.setValue('class', parseInt(v))}>
-									<SelectTrigger className="h-10 border-slate-200 rounded-sm text-sm">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{Object.entries(CLASS_LABELS).map(([num, label]) => (
-											<SelectItem key={num} value={num}>{num} — {label}</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<label className="text-xs font-semibold text-slate-700">Classe</label>
+								<div className="h-10 flex items-center px-3 border border-slate-200 rounded-sm bg-slate-50 text-sm text-slate-600 truncate">
+									{derivedClass ? `${derivedClass} — ${CLASS_LABELS[derivedClass]}` : 'Definida pelo código'}
+								</div>
 							</div>
 						</div>
 						<div className="space-y-1.5">

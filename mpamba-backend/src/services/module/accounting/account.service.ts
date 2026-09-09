@@ -1,30 +1,124 @@
 import { prisma } from '../../../config/prisma.config.js';
 import { BaseAccountingService } from './base.service.js';
-import { DEFAULT_ACCOUNTS, ANCHOR_ACCOUNT_CODES, type AccountSide } from './default-accounts.constants.js';
+import {
+	DEFAULT_ACCOUNTS,
+	ANCHOR_ACCOUNT_CODES,
+	accountClassOf,
+	parentCodeOf,
+	compareAccountCodes,
+	type AccountSide,
+} from './default-accounts.constants.js';
+import { ACCOUNT_CODE_PATTERN } from '../../../shared/dto/accounting.dto.js';
 
 export class AccountingAccountService extends BaseAccountingService {
 	/**
-	 * Semeia o plano de contas por defeito para a organização, de forma preguiçosa (lazy)
-	 * e idempotente — só cria se a organização ainda não tiver nenhuma conta.
+	 * Garante que o plano de contas do PGC-Angola está semeado na organização.
+	 *
+	 * É idempotente e corre conta a conta em vez de «só se a organização não
+	 * tiver nenhuma»: assim uma organização que ficou a meio do plano — ou que
+	 * vem da estrutura antiga, remapeada pela migração
+	 * `align_chart_of_accounts_pgc_angola` — recebe as contas que faltam e as
+	 * ligações de hierarquia sem intervenção manual.
+	 *
+	 * Não toca no `name` nem no `isActive` das contas que já existem: renomear
+	 * uma conta (ex.: 43.1 para o banco concreto) ou desativar uma que não se usa
+	 * são decisões da organização. Uma conta do plano que seja apagada volta a
+	 * aparecer nesta sincronização — para a esconder, desative-a.
 	 */
 	async ensureDefaultAccounts(orgId: string) {
-		const count = await prisma.accountingAccount.count({ where: { organizationId: orgId } });
-		if (count > 0) return;
+		const existing = await prisma.accountingAccount.findMany({
+			where: { organizationId: orgId },
+			select: { id: true, code: true, class: true, side: true, parentId: true },
+		});
+		const byCode = new Map(existing.map((account) => [account.code, account]));
 
-		const codeToId = new Map<string, string>();
-		for (const template of DEFAULT_ACCOUNTS) {
-			const parentId = template.parentCode ? codeToId.get(template.parentCode) ?? null : null;
-			const created = await prisma.accountingAccount.create({
-				data: {
+		const missing = DEFAULT_ACCOUNTS.filter((template) => !byCode.has(template.code));
+		if (missing.length > 0) {
+			await prisma.accountingAccount.createMany({
+				data: missing.map((template) => ({
 					code: template.code,
 					name: template.name,
-					class: template.class,
+					class: accountClassOf(template.code),
 					side: template.side,
 					organizationId: orgId,
-					parentId,
-				},
+				})),
+				skipDuplicates: true,
 			});
-			codeToId.set(template.code, created.id);
+		}
+
+		const needsClassOrSideFix = DEFAULT_ACCOUNTS.some((template) => {
+			const account = byCode.get(template.code);
+			return !!account && (account.side !== template.side || account.class !== accountClassOf(template.code));
+		});
+		const needsParentFix = DEFAULT_ACCOUNTS.some((template) => {
+			const account = byCode.get(template.code);
+			if (!account) return false;
+			const parentCode = parentCodeOf(template.code);
+			const parent = parentCode ? byCode.get(parentCode) : undefined;
+			return !!parent && account.parentId !== parent.id;
+		});
+
+		if (missing.length === 0 && !needsClassOrSideFix && !needsParentFix) return;
+
+		await this.syncPlanStructure(orgId);
+	}
+
+	/**
+	 * Segunda passagem da sincronização: alinha `class`, `side` e `parentId` das
+	 * contas do plano. Agrupa as contas por valor a escrever para fazer um punhado
+	 * de `updateMany` em vez de um update por conta (o plano tem ~250 contas).
+	 */
+	private async syncPlanStructure(orgId: string) {
+		const accounts = await prisma.accountingAccount.findMany({
+			where: { organizationId: orgId },
+			select: { id: true, code: true, class: true, side: true, parentId: true },
+		});
+		const byCode = new Map(accounts.map((account) => [account.code, account]));
+
+		const codesBySide = new Map<AccountSide, string[]>();
+		const codesByParent = new Map<string, string[]>();
+
+		for (const template of DEFAULT_ACCOUNTS) {
+			const account = byCode.get(template.code);
+			if (!account) continue;
+
+			if (account.side !== template.side || account.class !== accountClassOf(template.code)) {
+				const list = codesBySide.get(template.side) ?? [];
+				list.push(template.code);
+				codesBySide.set(template.side, list);
+			}
+
+			const parentCode = parentCodeOf(template.code);
+			const parent = parentCode ? byCode.get(parentCode) : undefined;
+			if (parent && account.parentId !== parent.id) {
+				const list = codesByParent.get(parent.id) ?? [];
+				list.push(template.code);
+				codesByParent.set(parent.id, list);
+			}
+		}
+
+		for (const [side, codes] of codesBySide) {
+			// Todos os códigos de um mesmo `side` podem ter classes diferentes, por
+			// isso a classe vai por grupo de classe dentro do grupo de `side`.
+			const codesByClass = new Map<number, string[]>();
+			for (const code of codes) {
+				const list = codesByClass.get(accountClassOf(code)) ?? [];
+				list.push(code);
+				codesByClass.set(accountClassOf(code), list);
+			}
+			for (const [accountClass, classCodes] of codesByClass) {
+				await prisma.accountingAccount.updateMany({
+					where: { organizationId: orgId, code: { in: classCodes } },
+					data: { side, class: accountClass },
+				});
+			}
+		}
+
+		for (const [parentId, codes] of codesByParent) {
+			await prisma.accountingAccount.updateMany({
+				where: { organizationId: orgId, code: { in: codes } },
+				data: { parentId },
+			});
 		}
 	}
 
@@ -32,10 +126,13 @@ export class AccountingAccountService extends BaseAccountingService {
 		const orgId = this.orgId;
 		await this.ensureDefaultAccounts(orgId);
 
-		return prisma.accountingAccount.findMany({
+		const accounts = await prisma.accountingAccount.findMany({
 			where: { organizationId: orgId },
-			orderBy: { code: 'asc' },
 		});
+
+		// A ordenação é feita aqui e não em SQL porque `ORDER BY code` é textual e
+		// colocaria 75.2.11 antes de 75.2.9, e 68.10 antes de 68.9.
+		return accounts.sort((a, b) => compareAccountCodes(a.code, b.code));
 	}
 
 	async getAccountById(id: string) {
@@ -47,13 +144,35 @@ export class AccountingAccountService extends BaseAccountingService {
 
 	async createAccount(data: { code: string; name: string; class: number; side: AccountSide; parentId?: string | null }) {
 		const orgId = this.orgId;
+
+		if (!ACCOUNT_CODE_PATTERN.test(data.code)) {
+			throw new Error('Código inválido. Use a numeração do PGC (ex.: 43, 43.1, 34.5.3), começando pela classe 1 a 8');
+		}
+		if (data.class !== accountClassOf(data.code)) {
+			throw new Error(`O código ${data.code} pertence à classe ${accountClassOf(data.code)} e não à classe ${data.class}`);
+		}
+
+		const duplicate = await prisma.accountingAccount.findFirst({ where: { organizationId: orgId, code: data.code } });
+		if (duplicate) throw new Error(`Já existe uma conta com o código ${data.code}`);
+
+		// Se não vier mãe explícita, liga à conta que o código indica (34.5.3 → 34.5).
+		let parentId = data.parentId ?? null;
+		if (!parentId) {
+			const parentCode = parentCodeOf(data.code);
+			if (parentCode) {
+				const parent = await prisma.accountingAccount.findFirst({ where: { organizationId: orgId, code: parentCode } });
+				if (!parent) throw new Error(`A conta ${parentCode}, que agrega ${data.code}, ainda não existe`);
+				parentId = parent.id;
+			}
+		}
+
 		return prisma.accountingAccount.create({
 			data: {
 				code: data.code,
 				name: data.name,
 				class: data.class,
 				side: data.side,
-				parentId: data.parentId ?? null,
+				parentId,
 				organizationId: orgId,
 			},
 		});
@@ -85,6 +204,11 @@ export class AccountingAccountService extends BaseAccountingService {
 		const linesCount = await prisma.journalEntryLine.count({ where: { accountId: id } });
 		if (linesCount > 0) {
 			throw new Error('Esta conta já tem lançamentos associados e não pode ser eliminada');
+		}
+
+		const childrenCount = await prisma.accountingAccount.count({ where: { parentId: id } });
+		if (childrenCount > 0) {
+			throw new Error('Esta conta agrega sub-contas. Elimine primeiro as sub-contas');
 		}
 
 		await prisma.accountingAccount.delete({ where: { id } });

@@ -10,10 +10,18 @@ import { accountingAccountService } from './account.service.js';
  */
 export class AccountingPostingService {
 	private async getAccountId(organizationId: string, code: string): Promise<string | null> {
-		// Garante que o plano de contas por defeito já foi semeado para esta organização
-		await accountingAccountService.ensureDefaultAccounts(organizationId);
 		const account = await prisma.accountingAccount.findFirst({ where: { organizationId, code } });
 		return account?.id ?? null;
+	}
+
+	/**
+	 * Garante o plano de contas antes de resolver as contas-âncora. É chamado uma
+	 * vez por lançamento, e não dentro de `getAccountId`: as âncoras são
+	 * resolvidas em paralelo, e semear a partir de cada uma repetiria a
+	 * sincronização e punha várias a semear ao mesmo tempo.
+	 */
+	private async ensurePlan(organizationId: string) {
+		await accountingAccountService.ensureDefaultAccounts(organizationId);
 	}
 
 	private async alreadyPosted(organizationId: string, sourceReference: string): Promise<boolean> {
@@ -27,20 +35,40 @@ export class AccountingPostingService {
 		return `LC-${year}-${String(count + 1).padStart(6, '0')}`;
 	}
 
-	async postInvoiceIssued(invoice: { id: string; number: string | null; organizationId: string; userId: string; subtotal: number; taxTotal: number; total: number }) {
+	async postInvoiceIssued(invoice: {
+		id: string;
+		number: string | null;
+		organizationId: string;
+		userId: string;
+		subtotal: number;
+		taxTotal: number;
+		total: number;
+		items?: { serviceId?: string | null; subtotal: number }[];
+	}) {
 		try {
 			const sourceReference = `INV:${invoice.number}`;
 			if (await this.alreadyPosted(invoice.organizationId, sourceReference)) return;
 
-			const [clientesId, vendasId, ivaId] = await Promise.all([
+			await this.ensurePlan(invoice.organizationId);
+			const [clientesId, vendasId, servicosId, ivaId] = await Promise.all([
 				this.getAccountId(invoice.organizationId, ANCHOR_ACCOUNT_CODES.CLIENTES),
 				this.getAccountId(invoice.organizationId, ANCHOR_ACCOUNT_CODES.VENDAS),
+				this.getAccountId(invoice.organizationId, ANCHOR_ACCOUNT_CODES.PRESTACOES_SERVICOS),
 				this.getAccountId(invoice.organizationId, ANCHOR_ACCOUNT_CODES.IVA_LIQUIDADO),
 			]);
-			if (!clientesId || !vendasId || !ivaId) return;
+			if (!clientesId || !vendasId || !servicosId || !ivaId) return;
+
+			// O PGC separa 61 Vendas (mercadorias) de 62 Prestações de serviços, por
+			// isso o rédito da fatura é repartido pelas linhas que vendem serviços e
+			// pelas restantes. Sem linhas na fatura, tudo vai para Vendas.
+			const servicesRevenue = (invoice.items ?? [])
+				.filter((item) => !!item.serviceId)
+				.reduce((sum, item) => sum + item.subtotal, 0);
+			const goodsRevenue = invoice.subtotal - servicesRevenue;
 
 			const lines = [{ accountId: clientesId, debit: invoice.total, credit: 0 }];
-			if (invoice.subtotal > 0) lines.push({ accountId: vendasId, debit: 0, credit: invoice.subtotal });
+			if (goodsRevenue > 0) lines.push({ accountId: vendasId, debit: 0, credit: goodsRevenue });
+			if (servicesRevenue > 0) lines.push({ accountId: servicosId, debit: 0, credit: servicesRevenue });
 			if (invoice.taxTotal > 0) lines.push({ accountId: ivaId, debit: 0, credit: invoice.taxTotal });
 
 			const number = await this.generateNumber(invoice.organizationId);
@@ -65,6 +93,7 @@ export class AccountingPostingService {
 			const sourceReference = `REC:${receipt.number}`;
 			if (await this.alreadyPosted(receipt.organizationId, sourceReference)) return;
 
+			await this.ensurePlan(receipt.organizationId);
 			const cashCode = financialAccountType === 'BANCO' ? ANCHOR_ACCOUNT_CODES.BANCOS : ANCHOR_ACCOUNT_CODES.CAIXA;
 			const [cashId, clientesId] = await Promise.all([
 				this.getAccountId(receipt.organizationId, cashCode),
@@ -99,6 +128,7 @@ export class AccountingPostingService {
 			const sourceReference = `NC:${creditNote.number}`;
 			if (await this.alreadyPosted(creditNote.organizationId, sourceReference)) return;
 
+			await this.ensurePlan(creditNote.organizationId);
 			const [clientesId, vendasId, ivaId] = await Promise.all([
 				this.getAccountId(creditNote.organizationId, ANCHOR_ACCOUNT_CODES.CLIENTES),
 				this.getAccountId(creditNote.organizationId, ANCHOR_ACCOUNT_CODES.VENDAS),

@@ -2,13 +2,24 @@ import { z } from 'zod';
 
 export const AccountSideSchema = z.enum(['ATIVO', 'PASSIVO', 'CAPITAL_PROPRIO', 'CUSTO', 'PROVEITO']);
 
-export const CreateAccountingAccountSchema = z.object({
-	code: z.string().min(1, 'Código é obrigatório'),
-	name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-	class: z.number().int().min(1).max(8),
-	side: AccountSideSchema,
-	parentId: z.string().uuid().optional().nullable(),
-});
+// Numeração do PGC-Angola: classe 1 a 8, sub-contas separadas por ponto
+// (43, 43.1, 34.5.3). A classe é sempre o primeiro dígito do código.
+export const ACCOUNT_CODE_PATTERN = /^[1-8]\d(\.\d{1,2})*$/;
+
+export const CreateAccountingAccountSchema = z
+	.object({
+		code: z
+			.string()
+			.regex(ACCOUNT_CODE_PATTERN, 'Use a numeração do PGC (ex.: 43, 43.1, 34.5.3), começando pela classe 1 a 8'),
+		name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+		class: z.number().int().min(1).max(8),
+		side: AccountSideSchema,
+		parentId: z.string().uuid().optional().nullable(),
+	})
+	.refine((data) => data.class === Number(data.code[0]), {
+		message: 'A classe tem de corresponder ao primeiro dígito do código',
+		path: ['class'],
+	});
 
 export const UpdateAccountingAccountSchema = z.object({
 	name: z.string().min(2).optional(),

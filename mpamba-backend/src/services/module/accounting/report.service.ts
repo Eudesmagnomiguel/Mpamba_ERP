@@ -1,5 +1,6 @@
 import { prisma } from '../../../config/prisma.config.js';
 import { BaseAccountingService } from './base.service.js';
+import { compareAccountCodes } from './default-accounts.constants.js';
 
 export class AccountingReportService extends BaseAccountingService {
 	/**
@@ -16,10 +17,11 @@ export class AccountingReportService extends BaseAccountingService {
 			if (params.endDate) entryWhere.date.lte = params.endDate;
 		}
 
-		const accounts = await prisma.accountingAccount.findMany({
+		// `ORDER BY code` é textual e poria 75.2.11 antes de 75.2.9; a ordenação
+		// hierárquica dos códigos do PGC é feita em memória.
+		const accounts = (await prisma.accountingAccount.findMany({
 			where: { organizationId: orgId },
-			orderBy: { code: 'asc' },
-		});
+		})).sort((a, b) => compareAccountCodes(a.code, b.code));
 
 		const lines = await prisma.journalEntryLine.findMany({
 			where: { entry: entryWhere },
@@ -115,10 +117,9 @@ export class AccountingReportService extends BaseAccountingService {
 			if (params.endDate) entryWhere.date.lte = params.endDate;
 		}
 
-		const accounts = await prisma.accountingAccount.findMany({
+		const accounts = (await prisma.accountingAccount.findMany({
 			where: { organizationId: orgId, side: { in: ['CUSTO', 'PROVEITO'] } },
-			orderBy: { code: 'asc' },
-		});
+		})).sort((a, b) => compareAccountCodes(a.code, b.code));
 
 		const lines = await prisma.journalEntryLine.findMany({
 			where: { entry: entryWhere, accountId: { in: accounts.map((a) => a.id) } },
@@ -171,10 +172,9 @@ export class AccountingReportService extends BaseAccountingService {
 		const orgId = this.orgId;
 		const entryWhere: any = { organizationId: orgId, date: { lte: params.asOfDate } };
 
-		const accounts = await prisma.accountingAccount.findMany({
+		const accounts = (await prisma.accountingAccount.findMany({
 			where: { organizationId: orgId, side: { in: ['ATIVO', 'PASSIVO', 'CAPITAL_PROPRIO'] } },
-			orderBy: { code: 'asc' },
-		});
+		})).sort((a, b) => compareAccountCodes(a.code, b.code));
 
 		const lines = await prisma.journalEntryLine.findMany({
 			where: { entry: entryWhere, accountId: { in: accounts.map((a) => a.id) } },
