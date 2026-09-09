@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
 	BookOpen,
 	Plus,
@@ -71,6 +71,18 @@ export default function JournalEntriesPage() {
 		},
 	});
 
+	// Só as contas movimentáveis entram no seletor: no PGC os lançamentos vão
+	// para a conta mais desagregada, e uma conta desativada não aceita
+	// movimentos. O backend recusa ambos os casos — filtrar aqui evita que o
+	// utilizador só descubra o problema ao gravar.
+	const movableAccounts = useMemo(() => {
+		const list = accounts || [];
+		const aggregatorIds = new Set(list.map((acc) => acc.parentId).filter(Boolean) as string[]);
+		return list.filter((acc) => acc.isActive && !aggregatorIds.has(acc.id));
+	}, [accounts]);
+
+	const today = new Date().toISOString().slice(0, 10);
+
 	const { fields, append, remove } = useFieldArray({ control: form.control, name: 'lines' });
 	const watchedLines = form.watch('lines') || [];
 	const totalDebit = watchedLines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
@@ -91,7 +103,8 @@ export default function JournalEntriesPage() {
 			return;
 		}
 		try {
-			await createEntry.mutateAsync(data);
+			// Um input de data vazio devolve '', que o backend não consegue converter.
+			await createEntry.mutateAsync({ ...data, date: data.date || undefined });
 			toast.success('Lançamento registado com sucesso!');
 			setIsCreateOpen(false);
 			form.reset({ description: '', lines: [{ accountId: '', debit: 0, credit: 0 }, { accountId: '', debit: 0, credit: 0 }] });
@@ -292,7 +305,7 @@ export default function JournalEntriesPage() {
 							</div>
 							<div className="space-y-1.5">
 								<label className="text-xs font-semibold text-slate-700">Data</label>
-								<Input type="date" className="h-10 border-slate-200 rounded-sm text-sm" {...form.register('date')} />
+								<Input type="date" max={today} className="h-10 border-slate-200 rounded-sm text-sm" {...form.register('date')} />
 							</div>
 						</div>
 
@@ -312,7 +325,7 @@ export default function JournalEntriesPage() {
 													<SelectValue placeholder="Conta..." />
 												</SelectTrigger>
 												<SelectContent>
-													{(accounts || []).map((acc) => (
+													{movableAccounts.map((acc) => (
 														<SelectItem key={acc.id} value={acc.id}>{acc.code} — {acc.name}</SelectItem>
 													))}
 												</SelectContent>

@@ -52,11 +52,64 @@ export class JournalService extends BaseAccountingService {
 		return { totalDebit, totalCredit };
 	}
 
+	/**
+	 * Valida as contas escolhidas nas linhas. Sem isto, um lançamento
+	 * balanceado passava mesmo com contas de outra organização, contas
+	 * desativadas ou contas que apenas agregam sub-contas.
+	 */
+	private async validateAccounts(orgId: string, lines: JournalEntryLineInput[]) {
+		const accountIds = [...new Set(lines.map((line) => line.accountId))];
+
+		const accounts = await prisma.accountingAccount.findMany({
+			where: { id: { in: accountIds }, organizationId: orgId },
+			select: { id: true, code: true, name: true, isActive: true },
+		});
+
+		if (accounts.length !== accountIds.length) {
+			throw new Error('O lançamento tem linhas com contas que não existem no plano de contas desta organização');
+		}
+
+		const inactive = accounts.filter((account) => !account.isActive);
+		if (inactive.length > 0) {
+			const listed = inactive.map((account) => `${account.code} — ${account.name}`).join(', ');
+			throw new Error(`Não é possível lançar em contas desativadas: ${listed}`);
+		}
+
+		// No PGC os movimentos vão para a conta mais desagregada. Uma conta que
+		// tenha sub-contas serve para somar, não para receber lançamentos.
+		const children = await prisma.accountingAccount.findMany({
+			where: { organizationId: orgId, parentId: { in: accountIds } },
+			select: { parentId: true },
+			distinct: ['parentId'],
+		});
+		if (children.length > 0) {
+			const aggregatorIds = new Set(children.map((child) => child.parentId));
+			const listed = accounts
+				.filter((account) => aggregatorIds.has(account.id))
+				.map((account) => `${account.code} — ${account.name}`)
+				.join(', ');
+			throw new Error(`Estas contas agregam sub-contas e não recebem lançamentos directos: ${listed}. Escolha a sub-conta respectiva`);
+		}
+	}
+
+	private validateDate(date?: Date) {
+		if (!date) return;
+		// Fim do dia de hoje, para que um lançamento com a data de hoje passe
+		// independentemente da hora enviada pelo cliente.
+		const endOfToday = new Date();
+		endOfToday.setHours(23, 59, 59, 999);
+		if (date.getTime() > endOfToday.getTime()) {
+			throw new Error('A data do lançamento não pode ser futura');
+		}
+	}
+
 	async createManualEntry(data: CreateJournalEntryInput) {
 		const orgId = this.orgId;
 		const userId = this.userId;
 
 		this.validateLines(data.lines);
+		this.validateDate(data.date);
+		await this.validateAccounts(orgId, data.lines);
 
 		return prisma.$transaction(async (tx) => {
 			const number = await this.generateNumber(orgId, tx);

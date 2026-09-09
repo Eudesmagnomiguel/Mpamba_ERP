@@ -34,7 +34,9 @@ export const journalEntryLineSchema = z.object({
 });
 
 export const createManualEntrySchema = z.object({
-	date: z.coerce.date().optional(),
+	// O input de data do formulário devolve '' quando está vazio, e z.coerce.date()
+	// converteria isso num Invalid Date em vez de o tratar como «sem data».
+	date: z.preprocess((value) => (value === '' || value === null ? undefined : value), z.coerce.date().optional()),
 	description: z.string().min(1, 'Descrição é obrigatória'),
 	lines: z.array(journalEntryLineSchema).min(2, 'São necessárias pelo menos duas linhas'),
 });
