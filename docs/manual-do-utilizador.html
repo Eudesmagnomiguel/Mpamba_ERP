@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<title>Manual do Utilizador — Mpamba</title>
+<style>
+	@page {
+		size: A4;
+		margin: 20mm 18mm 18mm 18mm;
+	}
+
+	:root {
+		--ink: #1a1a22;
+		--muted: #5b5b6b;
+		--faint: #8a8a99;
+		--rule: #d8d8e0;
+		--rule-soft: #ebebf1;
+		--primary: #483061;
+		--primary-soft: #f3f0f7;
+		--warn: #8a5a00;
+		--warn-bg: #fdf6e6;
+		--warn-rule: #f0dfb4;
+		--good: #0f6b4a;
+		--good-bg: #eef8f3;
+		--good-rule: #c6e6d8;
+	}
+
+	* { box-sizing: border-box; }
+
+	html { font-size: 10.5pt; }
+
+	body {
+		margin: 0;
+		font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+		color: var(--ink);
+		line-height: 1.55;
+		background: #fff;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	/* ─── Capa ───────────────────────────────────────────────────────────── */
+	.cover {
+		height: 247mm;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		page-break-after: always;
+	}
+	.cover-top { padding-top: 28mm; }
+	.cover-mark {
+		display: inline-block;
+		font-size: 8pt;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--primary);
+		border: 1px solid var(--primary);
+		border-radius: 2px;
+		padding: 4px 10px;
+	}
+	.cover h1 {
+		font-size: 34pt;
+		line-height: 1.1;
+		margin: 14mm 0 0;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+	}
+	.cover h1 small {
+		display: block;
+		font-size: 15pt;
+		font-weight: 500;
+		color: var(--muted);
+		letter-spacing: 0;
+		margin-top: 5mm;
+	}
+	.cover-rule {
+		width: 40mm;
+		height: 3px;
+		background: var(--primary);
+		margin: 10mm 0 0;
+	}
+	.cover-lead {
+		font-size: 11.5pt;
+		color: var(--muted);
+		max-width: 125mm;
+		margin: 8mm 0 0;
+	}
+	.cover-meta {
+		border-top: 1px solid var(--rule);
+		padding-top: 5mm;
+		display: flex;
+		gap: 14mm;
+		font-size: 9pt;
+		color: var(--faint);
+	}
+	.cover-meta b { display: block; color: var(--ink); font-size: 9.5pt; font-weight: 600; }
+
+	/* ─── Estrutura ──────────────────────────────────────────────────────── */
+	h2, h3, h4 { page-break-after: avoid; }
+
+	h2 {
+		font-size: 17pt;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		margin: 0 0 6mm;
+		padding-bottom: 3mm;
+		border-bottom: 2px solid var(--primary);
+		counter-increment: sec;
+		counter-reset: sub;
+	}
+	h2::before {
+		content: counter(sec) ". ";
+		color: var(--primary);
+	}
+
+	h3 {
+		font-size: 12.5pt;
+		font-weight: 700;
+		margin: 8mm 0 3mm;
+		counter-increment: sub;
+	}
+	h3::before {
+		content: counter(sec) "." counter(sub) "  ";
+		color: var(--primary);
+		font-weight: 700;
+	}
+
+	h4 {
+		font-size: 10.5pt;
+		font-weight: 700;
+		margin: 5mm 0 2mm;
+		color: var(--primary);
+	}
+
+	section {
+		counter-reset: sub;
+		page-break-before: always;
+	}
+	section.no-break { page-break-before: auto; }
+
+	body { counter-reset: sec; }
+
+	p { margin: 0 0 3mm; }
+	ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+	li { margin-bottom: 1.5mm; }
+	li > ul, li > ol { margin-top: 1.5mm; }
+
+	strong { font-weight: 600; }
+	code {
+		font-family: "Cascadia Mono", Consolas, monospace;
+		font-size: 0.88em;
+		background: #f4f4f8;
+		border: 1px solid var(--rule-soft);
+		border-radius: 2px;
+		padding: 0.5px 4px;
+	}
+
+	/* ─── Índice ─────────────────────────────────────────────────────────── */
+	.toc { page-break-after: always; }
+	.toc h2 { border-bottom-color: var(--rule); }
+	/* O indice nao entra na numeracao das secoes. */
+	.toc h2 { counter-increment: none; }
+	.toc h2::before { content: none; }
+	.toc ol { list-style: none; padding: 0; counter-reset: toc; }
+	.toc > ol > li {
+		counter-increment: toc;
+		border-bottom: 1px solid var(--rule-soft);
+		padding: 2.4mm 0;
+		font-weight: 600;
+		font-size: 11pt;
+	}
+	.toc > ol > li::before {
+		content: counter(toc) ".";
+		display: inline-block;
+		width: 9mm;
+		color: var(--primary);
+	}
+	.toc ul {
+		list-style: none;
+		padding: 1.5mm 0 0 9mm;
+		font-weight: 400;
+		font-size: 9.5pt;
+		color: var(--muted);
+	}
+	.toc ul li { margin: 0; padding: 0.5mm 0; }
+	.toc ul li::before { content: "— "; color: var(--faint); }
+	.toc a { color: inherit; text-decoration: none; }
+
+	/* ─── Tabelas ────────────────────────────────────────────────────────── */
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		margin: 3mm 0 5mm;
+		font-size: 9pt;
+		page-break-inside: avoid;
+	}
+	caption {
+		caption-side: top;
+		text-align: left;
+		font-size: 8.5pt;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--faint);
+		padding-bottom: 2mm;
+	}
+	th {
+		text-align: left;
+		background: var(--primary-soft);
+		color: var(--primary);
+		font-weight: 700;
+		font-size: 8.5pt;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 2.2mm 2.5mm;
+		border-bottom: 1px solid var(--rule);
+	}
+	td {
+		padding: 2.2mm 2.5mm;
+		border-bottom: 1px solid var(--rule-soft);
+		vertical-align: top;
+	}
+	tr { page-break-inside: avoid; }
+	/* Numa tabela que atravesse paginas, o cabecalho repete-se. */
+	thead { display: table-header-group; }
+	td code { white-space: nowrap; }
+	.num { text-align: right; white-space: nowrap; }
+	.mono { font-family: "Cascadia Mono", Consolas, monospace; font-size: 8.5pt; white-space: nowrap; }
+
+	/* ─── Caixas ─────────────────────────────────────────────────────────── */
+	.note, .warn, .good {
+		border-left: 3px solid var(--rule);
+		background: #f8f8fb;
+		padding: 3mm 4mm;
+		margin: 4mm 0;
+		font-size: 9.5pt;
+		page-break-inside: avoid;
+	}
+	.note { border-left-color: var(--primary); background: var(--primary-soft); }
+	.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+	.good { border-left-color: var(--good); background: var(--good-bg); }
+	.note p:last-child, .warn p:last-child, .good p:last-child { margin-bottom: 0; }
+	.box-label {
+		display: block;
+		font-size: 8pt;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		margin-bottom: 1.5mm;
+	}
+	.note .box-label { color: var(--primary); }
+	.warn .box-label { color: var(--warn); }
+	.good .box-label { color: var(--good); }
+
+	/* ─── Percurso numerado ──────────────────────────────────────────────── */
+	.steps { list-style: none; padding: 0; counter-reset: step; margin: 3mm 0 5mm; }
+	.steps > li {
+		counter-increment: step;
+		position: relative;
+		padding-left: 10mm;
+		margin-bottom: 3mm;
+		page-break-inside: avoid;
+	}
+	.steps > li::before {
+		content: counter(step);
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 6.5mm;
+		height: 6.5mm;
+		background: var(--primary);
+		color: #fff;
+		border-radius: 50%;
+		font-size: 8.5pt;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.steps b { display: block; }
+
+	.lead {
+		font-size: 11pt;
+		color: var(--muted);
+		margin-bottom: 5mm;
+	}
+
+	.pill {
+		display: inline-block;
+		font-size: 8pt;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 1px 6px;
+		border-radius: 2px;
+		background: var(--primary-soft);
+		color: var(--primary);
+		border: 1px solid #ddd4e8;
+	}
+
+	.tight { margin-bottom: 1.5mm; }
+	.end {
+		margin-top: 10mm;
+		padding-top: 4mm;
+		border-top: 1px solid var(--rule);
+		font-size: 9pt;
+		color: var(--faint);
+		text-align: center;
+	}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ CAPA ══════════════════════════ -->
+<div class="cover">
+	<div class="cover-top">
+		<span class="cover-mark">Mpamba ERP</span>
+		<h1>
+			Manual do Utilizador
+			<small>Plataforma de gestão para empresas em Angola</small>
+		</h1>
+		<div class="cover-rule"></div>
+		<p class="cover-lead">
+			Guia completo dos módulos de Facturação, Stock, Tesouraria e Contabilidade:
+			o que cada ecrã faz, as regras que o sistema aplica e como os módulos
+			trabalham em conjunto.
+		</p>
+	</div>
+	<div class="cover-meta">
+		<div><b>Versão</b>Setembro de 2026</div>
+		<div><b>Destinatários</b>Utilizadores e administradores de organização</div>
+		<div><b>Conformidade</b>PGC-Angola · Decreto n.º 82/01</div>
+	</div>
+</div>
+
+<!-- ══════════════════════════ ÍNDICE ══════════════════════════ -->
+<div class="toc">
+	<h2>Índice</h2>
+	<ol>
+		<li><a href="#plataforma">Sobre a plataforma</a>
+			<ul><li>Módulos e independência</li><li>Isolamento dos dados</li><li>Onde trabalha cada pessoa</li></ul>
+		</li>
+		<li><a href="#primeiros-passos">Primeiros passos</a>
+			<ul><li>Recuperar a senha</li><li>O seu perfil</li></ul>
+		</li>
+		<li><a href="#acessos">Acessos: papéis e permissões</a>
+			<ul><li>Como o acesso é decidido</li><li>Os perfis pré-configurados</li><li>Gerir utilizadores e papéis</li><li>Quando aparece «não tem permissão»</li></ul>
+		</li>
+		<li><a href="#subscricao">Subscrição, planos e módulos</a>
+			<ul><li>Planos disponíveis</li><li>Estados da subscrição</li><li>Renovar ou mudar de plano</li></ul>
+		</li>
+		<li><a href="#facturacao">Módulo de Facturação</a>
+			<ul><li>Clientes</li><li>Serviços</li><li>Impostos</li><li>Séries de documentos</li><li>Facturas: ciclo de vida</li><li>Proformas</li><li>Recibos</li><li>Notas de crédito</li><li>Posto de Venda (POS)</li><li>Formato fiscal angolano (AGT)</li></ul>
+		</li>
+		<li><a href="#stock">Módulo de Stock</a>
+			<ul><li>Produtos</li><li>Data de validade</li><li>Categorias e fornecedores</li><li>Entradas, saídas e ajustes</li><li>Alertas e relatório de inventário</li></ul>
+		</li>
+		<li><a href="#tesouraria">Módulo de Tesouraria</a>
+			<ul><li>Contas financeiras</li><li>Categorias e centros de custo</li><li>Movimentos e transferências</li><li>A receber e a pagar</li><li>Reconciliação bancária</li><li>Alerta de saldo crítico</li></ul>
+		</li>
+		<li><a href="#contabilidade">Módulo de Contabilidade</a>
+			<ul><li>Plano de contas</li><li>Consultar o decreto na plataforma</li><li>Lançamentos manuais</li><li>Lançamentos automáticos</li><li>Demonstrações e consultas</li></ul>
+		</li>
+		<li><a href="#integracao">Integração automática entre módulos</a>
+			<ul><li>Módulos inactivos</li></ul>
+		</li>
+		<li><a href="#notificacoes">Notificações e alertas automáticos</a></li>
+		<li><a href="#problemas">Resolução de problemas</a></li>
+		<li><a href="#glossario">Glossário</a></li>
+	</ol>
+</div>
+
+<!-- ══════════════════════════ 1 ══════════════════════════ -->
+<section id="plataforma" class="no-break">
+	<h2>Sobre a plataforma</h2>
+
+	<p class="lead">
+		O Mpamba é uma plataforma de gestão empresarial para pequenas e médias empresas
+		em Angola. Cobre o ciclo comercial completo — vender, controlar existências,
+		gerir dinheiro e fechar contas — e cumpre as exigências fiscais angolanas.
+	</p>
+
+	<h3>Módulos e independência</h3>
+	<p>
+		A plataforma está dividida em quatro módulos. Cada um funciona de forma
+		autónoma: uma empresa que só facture, sem stock, trabalha normalmente. Quando
+		há mais de um módulo activo, eles comunicam automaticamente entre si
+		(ver capítulo 9).
+	</p>
+
+	<table>
+		<caption>Os quatro módulos</caption>
+		<thead>
+			<tr><th style="width:26%">Módulo</th><th style="width:30%">Serve para</th><th>Principais ecrãs</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><strong>Facturação</strong></td>
+				<td>Vender e emitir documentos fiscais</td>
+				<td>Clientes, Facturas, Proformas, Notas de crédito, Recibos, Serviços, Impostos, Séries de documentos, Posto de Venda</td>
+			</tr>
+			<tr>
+				<td><strong>Stock</strong></td>
+				<td>Controlar existências</td>
+				<td>Produtos, Categorias, Fornecedores, Entradas, Saídas, Movimentos</td>
+			</tr>
+			<tr>
+				<td><strong>Tesouraria</strong></td>
+				<td>Controlar dinheiro em caixa e banco</td>
+				<td>Contas, Categorias, Movimentos, Reconciliação Bancária, A Receber, A Pagar, Centros de Custo</td>
+			</tr>
+			<tr>
+				<td><strong>Contabilidade</strong></td>
+				<td>Registo contabilístico e demonstrações financeiras</td>
+				<td>Plano de Contas, PGC (Decreto 82/01), Lançamentos, Balancete, Demonstração de Resultados, Balanço</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h3>Isolamento dos dados</h3>
+	<p>
+		Cada organização vê exclusivamente os seus próprios dados. Clientes, produtos,
+		contas e lançamentos pertencem sempre a uma organização, e o sistema filtra
+		todos os pedidos por ela — não há forma de um utilizador de uma empresa
+		alcançar dados de outra.
+	</p>
+
+	<h3>Onde trabalha cada pessoa</h3>
+	<p>
+		Depois de entrar, é encaminhado para o painel do módulo a que tem acesso.
+		Existe ainda uma área comum de <strong>Gestão do Sistema</strong>, presente no
+		menu de todos os módulos, com Utilizadores, Funções &amp; Acesso, Subscrição e
+		Configurações.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 2 ══════════════════════════ -->
+<section id="primeiros-passos">
+	<h2>Primeiros passos</h2>
+
+	<p class="lead">
+		Uma empresa nova não entra directamente: passa por registo, aprovação pela
+		Mpamba e activação por código. Este percurso existe uma única vez, na abertura
+		da conta.
+	</p>
+
+	<ol class="steps">
+		<li>
+			<b>Registar a empresa</b>
+			No ecrã de registo, indique os dados da empresa e do administrador, e
+			escolha o plano pretendido. A organização fica em estado <em>pendente</em> e
+			ainda não permite entrar.
+		</li>
+		<li>
+			<b>Aprovação pela Mpamba</b>
+			A equipa Mpamba revê o pedido. Aprovado, é gerado um <strong>código de
+			activação</strong> enviado por email ao administrador indicado no registo.
+		</li>
+		<li>
+			<b>Activar a conta</b>
+			Introduza o código no ecrã de activação. A organização passa a activa e os
+			módulos do plano contratado são ligados automaticamente.
+		</li>
+		<li>
+			<b>Entrar</b>
+			A partir daqui entra com email (ou nome de utilizador) e senha. O
+			administrador pode então criar os restantes utilizadores.
+		</li>
+	</ol>
+
+	<div class="note">
+		<span class="box-label">Bom saber</span>
+		<p>
+			As senhas são guardadas cifradas e nunca em texto simples. Nem a equipa
+			Mpamba consegue ler a sua senha — se a perder, tem de a redefinir.
+		</p>
+	</div>
+
+	<h3>Recuperar a senha</h3>
+	<p>
+		Em <strong>Esqueci a senha</strong>, indique o seu email. Receberá um link de
+		redefinição <strong>válido por uma hora</strong>. Passado esse prazo, o link
+		deixa de servir e tem de pedir outro.
+	</p>
+
+	<h3>O seu perfil</h3>
+	<p>
+		Em <strong>Perfil</strong> actualiza o seu nome, fotografia e senha. Os papéis
+		que lhe estão atribuídos aparecem aqui, mas só um administrador os pode
+		alterar.
+	</p>
+
+	<div class="note">
+		<span class="box-label">Alterações de acesso</span>
+		<p>
+			Quando um administrador lhe altera papéis ou a empresa activa um módulo
+			novo, não precisa de sair e voltar a entrar: a aplicação actualiza o seu
+			perfil sozinha ao abrir e quando a janela volta a ganhar foco.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════════ 3 ══════════════════════════ -->
+<section id="acessos">
+	<h2>Acessos: papéis e permissões</h2>
+
+	<p class="lead">
+		O que cada pessoa vê e pode fazer é decidido pelos <strong>papéis</strong> que
+		lhe são atribuídos. Cada papel é um conjunto de <strong>permissões</strong>
+		— autorizações concretas como «criar factura» ou «ver stock».
+	</p>
+
+	<h3>Como o acesso é decidido</h3>
+	<p>Cada acção passa por duas verificações independentes:</p>
+	<ul>
+		<li><strong>O módulo está activo na subscrição?</strong> Se não, o módulo inteiro fica inacessível.</li>
+		<li><strong>O utilizador tem a permissão?</strong> Se não, a acção é recusada mesmo com o módulo activo.</li>
+	</ul>
+	<p>
+		O menu lateral acompanha estas regras: só aparecem as entradas para as quais
+		tem permissão.
+	</p>
+
+	<h3>Os perfis pré-configurados</h3>
+	<p>
+		Toda a organização nova recebe automaticamente o papel
+		<strong>Administrador</strong> (acesso total) e os oito perfis seguintes, já com
+		as permissões próprias de cada função. Pode usá-los como estão, alterá-los ou
+		criar papéis novos.
+	</p>
+
+	<table>
+		<caption>Perfis criados em cada organização</caption>
+		<thead>
+			<tr><th style="width:24%">Perfil</th><th>Para que serve</th></tr>
+		</thead>
+		<tbody>
+			<tr><td><strong>Administrador</strong></td><td>Acesso total, incluindo gestão de utilizadores, papéis e permissões.</td></tr>
+			<tr><td><strong>Diretor Geral</strong></td><td>Visão e supervisão global de toda a operação, sem gestão de papéis e permissões.</td></tr>
+			<tr><td><strong>Diretor Financeiro</strong></td><td>Tesouraria, relatórios financeiros, impostos e séries de documentos.</td></tr>
+			<tr><td><strong>Gestor</strong></td><td>Operação diária: stock, clientes e facturação básica.</td></tr>
+			<tr><td><strong>Tesoureiro</strong></td><td>Caixas, contas bancárias e movimentos de tesouraria.</td></tr>
+			<tr><td><strong>Facturista</strong></td><td>Facturas, proformas, recibos, Posto de Venda e clientes.</td></tr>
+			<tr><td><strong>Contabilista</strong></td><td>Plano de contas, lançamentos, demonstrações financeiras e consulta de facturação e tesouraria.</td></tr>
+			<tr><td><strong>Auditor</strong></td><td>Apenas leitura, sobre toda a operação.</td></tr>
+			<tr><td><strong>Operador</strong></td><td>Movimentos de stock e vendas no Posto de Venda.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Gerir utilizadores e papéis</h3>
+	<ul>
+		<li><strong>Gestão do Sistema › Utilizadores</strong> — criar pessoas, atribuir-lhes papéis, activar e desactivar contas.</li>
+		<li><strong>Gestão do Sistema › Funções &amp; Acesso</strong> — ver os papéis da organização e as permissões de cada um.</li>
+	</ul>
+	<p>
+		Um utilizador pode ter mais do que um papel; nesse caso acumula as permissões
+		de todos. Em vez de eliminar quem sai da empresa, <strong>desactive a
+		conta</strong>: o histórico do que essa pessoa registou mantém-se intacto para
+		auditoria.
+	</p>
+
+	<h3>Quando aparece «não tem permissão»</h3>
+	<p>
+		A mensagem <em>«Não tem permissão para aceder a esta funcionalidade. Contacte o
+		administrador da sua organização.»</em> significa que o seu papel não inclui a
+		permissão exigida. Peça ao administrador da sua empresa para a acrescentar ao
+		seu papel, ou para lhe atribuir um perfil adequado.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 4 ══════════════════════════ -->
+<section id="subscricao">
+	<h2>Subscrição, planos e módulos</h2>
+
+	<p class="lead">
+		A subscrição é transversal: não pertence a nenhum módulo, é ela que determina
+		quais os módulos que a organização pode usar e se a conta está em condições de
+		operar.
+	</p>
+
+	<h3>Planos disponíveis</h3>
+	<table>
+		<caption>Planos e módulos incluídos</caption>
+		<thead>
+			<tr>
+				<th style="width:22%">Plano</th>
+				<th class="num" style="width:16%">Mensalidade</th>
+				<th style="width:14%">Facturação</th>
+				<th style="width:14%">Tesouraria</th>
+				<th style="width:12%">Stock</th>
+				<th>Contabilidade</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td><strong>Starter</strong><br><span style="color:var(--faint);font-size:8.5pt">Pequenas empresas</span></td><td class="num">15.000 Kz</td><td>Sim</td><td>—</td><td>—</td><td>—</td></tr>
+			<tr><td><strong>Professional</strong><br><span style="color:var(--faint);font-size:8.5pt">Empresas em crescimento</span></td><td class="num">45.000 Kz</td><td>Sim</td><td>Sim</td><td>—</td><td>—</td></tr>
+			<tr><td><strong>Enterprise</strong><br><span style="color:var(--faint);font-size:8.5pt">Operações completas</span></td><td class="num">95.000 Kz</td><td>Sim</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
+		</tbody>
+	</table>
+	<p>
+		Os valores são mensais e podem ser revistos pela Mpamba. Independentemente do
+		plano, a equipa Mpamba pode activar módulos adicionais a uma organização
+		específica.
+	</p>
+
+	<h3>Estados da subscrição</h3>
+	<table>
+		<caption>O que cada estado significa</caption>
+		<thead>
+			<tr><th style="width:24%">Estado</th><th>Significado</th></tr>
+		</thead>
+		<tbody>
+			<tr><td><span class="pill">Trial</span></td><td>Período experimental. A plataforma funciona normalmente.</td></tr>
+			<tr><td><span class="pill">Active</span></td><td>Subscrição em vigor. Acesso pleno aos módulos contratados.</td></tr>
+			<tr><td><span class="pill">Past due</span></td><td>Pagamento em atraso. Regularize para não perder o acesso.</td></tr>
+			<tr><td><span class="pill">Suspended</span></td><td>Conta suspensa. O acesso aos módulos fica bloqueado.</td></tr>
+			<tr><td><span class="pill">Expired</span></td><td>Subscrição terminada e não renovada.</td></tr>
+			<tr><td><span class="pill">Cancelled</span></td><td>Subscrição cancelada.</td></tr>
+		</tbody>
+	</table>
+
+	<div class="warn">
+		<span class="box-label">Atenção</span>
+		<p>
+			Com a subscrição fora de <em>Active</em> ou <em>Trial</em>, operações como
+			criar produtos ou emitir documentos são bloqueadas e os ecrãs avisam-no
+			disso. Os dados não se perdem — voltam a estar disponíveis assim que a
+			subscrição for reactivada.
+		</p>
+	</div>
+
+	<h3>Renovar ou mudar de plano</h3>
+	<p>
+		Em <strong>Gestão do Sistema › Subscrição</strong> vê o plano actual, o estado e
+		as datas. A partir daí submete pedidos de <strong>renovação</strong>,
+		<strong>upgrade</strong> ou <strong>downgrade</strong>, que ficam
+		<em>pendentes</em> até a Mpamba os aprovar ou rejeitar. Ao ser aprovado um
+		plano novo, os módulos da organização são sincronizados de imediato com os do
+		plano.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 5 ══════════════════════════ -->
+<section id="facturacao">
+	<h2>Módulo de Facturação</h2>
+
+	<p class="lead">
+		Emite documentos fiscais em conformidade com as regras angolanas. O princípio
+		que atravessa o módulo é simples: <strong>um documento emitido é imutável</strong>.
+	</p>
+
+	<h3>Clientes</h3>
+	<p>
+		Em <strong>Clientes</strong> mantém a carteira: nome (obrigatório), NIF,
+		endereço e contactos. O NIF é opcional mas fortemente recomendado — é ele que
+		identifica o adquirente no documento fiscal.
+	</p>
+	<div class="note">
+		<span class="box-label">Dados congelados</span>
+		<p>
+			Ao emitir um documento, os dados do cliente são copiados para dentro dele.
+			Alterar a ficha do cliente mais tarde <strong>não altera</strong> documentos
+			já emitidos — e é assim que deve ser, porque o documento fiscal tem de
+			refletir o que foi facturado no momento.
+		</p>
+	</div>
+
+	<h3>Serviços</h3>
+	<p>
+		Em <strong>Serviços</strong> registe o que vende e não é produto físico
+		(consultoria, manutenção, transporte). Serve para preencher linhas de factura
+		sem passar pelo stock. Na contabilidade, as linhas de serviço são reconhecidas
+		separadamente das mercadorias (ver capítulo 8).
+	</p>
+
+	<h3>Impostos</h3>
+	<p>
+		Em <strong>Impostos</strong> define as regras aplicáveis. O sistema distingue
+		três tipos, e cada regra pode aplicar-se globalmente ou apenas a um cliente,
+		categoria de cliente, serviço ou categoria de serviço.
+	</p>
+	<table>
+		<thead><tr><th style="width:26%">Tipo</th><th>Utilização</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Imposto</strong></td><td>IVA e outros impostos que acrescem ao valor.</td></tr>
+			<tr><td><strong>Retenção</strong></td><td>Valores retidos na fonte, abatidos ao total a receber.</td></tr>
+			<tr><td><strong>Isenção</strong></td><td>Isenções, com o motivo e o código legal que a factura tem de indicar.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Séries de documentos</h3>
+	<p>
+		Em <strong>Séries de Docs</strong> configura a numeração. Cada série tem um
+		prefixo e um contador sequencial por ano, e a numeração é atribuída
+		<strong>no momento da emissão</strong> — nunca no rascunho. Assim não há saltos
+		nem números repetidos, como a lei exige.
+	</p>
+
+	<h3>Facturas: ciclo de vida</h3>
+	<table>
+		<caption>Estados de uma factura</caption>
+		<thead>
+			<tr><th style="width:20%">Estado</th><th style="width:38%">O que pode fazer</th><th>Notas</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><span class="pill">Rascunho</span></td>
+				<td>Editar livremente, acrescentar e remover linhas, apagar</td>
+				<td>Ainda não tem número oficial e não tem valor fiscal.</td>
+			</tr>
+			<tr>
+				<td><span class="pill">Emitida</span></td>
+				<td>Imprimir, enviar, receber pagamento, cancelar</td>
+				<td>Recebe o número da série e passa a imutável.</td>
+			</tr>
+			<tr>
+				<td><span class="pill">Cancelada</span></td>
+				<td>Apenas consultar</td>
+				<td>Estado final. Não se reabre nem se reutiliza o número.</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h4>Criar e emitir</h4>
+	<ol class="steps">
+		<li><b>Novo documento</b> Escolha o cliente e a data. Fica em rascunho.</li>
+		<li><b>Linhas</b> Acrescente pelo menos uma linha, com descrição, quantidade, preço unitário, unidade e taxa de imposto. Desconto é opcional. A quantidade tem de ser maior que zero e o preço não pode ser negativo.</li>
+		<li><b>Conferir</b> Reveja subtotal, impostos, retenções e total.</li>
+		<li><b>Emitir</b> A factura recebe o número, deixa de ser editável e desencadeia as reacções automáticas dos outros módulos.</li>
+	</ol>
+
+	<div class="warn">
+		<span class="box-label">Correcções</span>
+		<p>
+			Uma factura emitida não se corrige. Consoante o caso: emita uma
+			<strong>nota de crédito</strong> (para anular ou reduzir o valor
+			facturado) ou <strong>cancele</strong> a factura e emita uma nova.
+		</p>
+	</div>
+
+	<h3>Proformas</h3>
+	<p>
+		A proforma é um documento sem valor fiscal, para orçamentar antes de facturar.
+		Aceite pelo cliente, dá origem a uma factura.
+	</p>
+
+	<h3>Recibos</h3>
+	<p>
+		O recibo comprova o pagamento recebido de uma factura. Ao emiti-lo, a factura
+		actualiza o estado de pagamento — <strong>pendente</strong>,
+		<strong>parcial</strong>, <strong>pago</strong> ou <strong>vencido</strong> —
+		e a Tesouraria registra a entrada de dinheiro se o módulo estiver activo.
+	</p>
+
+	<h3>Notas de crédito</h3>
+	<p>
+		A nota de crédito anula ou reduz o valor de uma factura emitida: devolução de
+		mercadoria, desconto concedido depois da emissão ou erro na factura. Fica
+		sempre ligada à factura de origem, e reverte o efeito contabilístico
+		correspondente.
+	</p>
+
+	<h3>Posto de Venda (POS)</h3>
+	<p>
+		Para venda ao balcão, o <strong>Posto de Venda</strong> permite facturar
+		rapidamente: procurar produtos, montar o carrinho, receber pagamento e emitir
+		o documento numa única passagem. Suporta sessões de caixa (abertura e fecho) e
+		respeita um limiar configurável a partir do qual a venda exige factura com
+		identificação do cliente.
+	</p>
+
+	<h3>Formato fiscal angolano (AGT)</h3>
+	<p>
+		Os documentos são impressos no formato exigido pela Administração Geral
+		Tributária. Para que saiam completos, preencha os dados da empresa em
+		<strong>Configurações</strong>:
+	</p>
+	<ul>
+		<li>Denominação social, NIF, endereço completo, cidade, código postal e país;</li>
+		<li>Telefone, fax e logótipo;</li>
+		<li><strong>Número de validação AGT</strong> do software;</li>
+		<li>Dados bancários (banco, conta, IBAN), que aparecem no documento para pagamento;</li>
+		<li>Regime de isenção aplicável (código e motivo) e entidade/taxa de retenção, quando existam.</li>
+	</ul>
+	<p>
+		Ao nível de cada factura, o sistema guarda ainda a condição de pagamento, a
+		requisição do cliente, a taxa de câmbio (documentos em moeda estrangeira) e a
+		base, taxa, valor e entidade de retenção. Em cada linha registam-se a unidade
+		e, havendo isenção, o código e o motivo.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 6 ══════════════════════════ -->
+<section id="stock">
+	<h2>Módulo de Stock</h2>
+
+	<p class="lead">
+		A regra fundamental do stock: <strong>a quantidade nunca se edita
+		directamente</strong>. Ela é sempre o resultado dos movimentos registados, o
+		que garante que qualquer variação tem data, motivo e responsável.
+	</p>
+
+	<p class="mono" style="background:var(--primary-soft);padding:3mm 4mm;border-left:3px solid var(--primary);white-space:normal">
+		quantidade actual = entradas − saídas + ajustes
+	</p>
+
+	<h3>Produtos</h3>
+	<p>Cada produto tem:</p>
+	<table>
+		<thead><tr><th style="width:26%">Campo</th><th>Regras</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Nome</strong></td><td>Obrigatório.</td></tr>
+			<tr><td><strong>SKU / Código</strong></td><td>Obrigatório e único na organização. Duas empresas diferentes podem usar o mesmo SKU.</td></tr>
+			<tr><td><strong>Unidade</strong></td><td>Obrigatória: unidade, caixa, quilograma, litro, metro, pacote e outras.</td></tr>
+			<tr><td><strong>Categoria</strong></td><td>Opcional. Agrupa produtos e alimenta a distribuição por categoria no painel.</td></tr>
+			<tr><td><strong>Preço de venda</strong></td><td>Opcional. Não afecta as quantidades, mas entra no valor do inventário.</td></tr>
+			<tr><td><strong>Quantidade inicial</strong></td><td>Só na criação. Gera automaticamente um movimento de entrada com o motivo «stock inicial».</td></tr>
+			<tr><td><strong>Stock mínimo</strong></td><td>Opcional. Abaixo (ou igual) deste valor, o produto passa a «stock baixo».</td></tr>
+			<tr><td><strong>Stock máximo</strong></td><td>Opcional. Não pode ser inferior ao mínimo.</td></tr>
+			<tr><td><strong>Data de validade</strong></td><td>Opcional. Deixe vazio nos produtos que não expiram.</td></tr>
+		</tbody>
+	</table>
+
+	<div class="note">
+		<span class="box-label">Eliminar produtos</span>
+		<p>
+			Um produto que já tenha movimentos <strong>não é eliminado</strong>: é
+			desactivado, para o histórico não ficar com referências perdidas. Só
+			produtos sem qualquer movimento são apagados definitivamente.
+		</p>
+	</div>
+
+	<h3>Data de validade</h3>
+	<p>
+		Preenchida a validade, a listagem passa a mostrar a data e quanto falta
+		(«Expira em 12 dias», «Expirou há 3 dias»), com quatro estados possíveis:
+	</p>
+	<table>
+		<thead><tr><th style="width:26%">Estado</th><th>Quando se aplica</th></tr></thead>
+		<tbody>
+			<tr><td><span class="pill">Sem validade</span></td><td>O produto não tem data de validade definida.</td></tr>
+			<tr><td><span class="pill">Válido</span></td><td>Faltam mais de 30 dias.</td></tr>
+			<tr><td><span class="pill">A expirar</span></td><td>Faltam 30 dias ou menos.</td></tr>
+			<tr><td><span class="pill">Expirado</span></td><td>A data já passou. O produto expira no fim do dia da validade, pelo que só conta como expirado no dia seguinte.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		O painel do Stock apresenta um aviso com o número de produtos expirados e a
+		expirar, e uma notificação diária avisa sobre os que têm stock e entram na
+		janela dos 30 dias.
+	</p>
+	<div class="warn">
+		<span class="box-label">Limitação a conhecer</span>
+		<p>
+			A validade é registada <strong>por produto</strong> e não por lote. Se o
+			mesmo produto tiver em armazém lotes com validades diferentes, indique a
+			mais próxima. O sistema também <strong>não impede</strong> vender ou dar
+			saída a um produto expirado — sinaliza-o, mas a decisão é sua.
+		</p>
+	</div>
+
+	<h3>Categorias e fornecedores</h3>
+	<p>
+		<strong>Categorias</strong> organizam o catálogo. <strong>Fornecedores</strong>
+		guardam nome, NIF e contactos, e podem ser associados às entradas de stock,
+		ficando o registo de a quem se comprou.
+	</p>
+
+	<h3>Entradas, saídas e ajustes</h3>
+	<table>
+		<caption>Tipos de movimento</caption>
+		<thead>
+			<tr><th style="width:20%">Tipo</th><th style="width:34%">Quando usar</th><th>Exige</th></tr>
+		</thead>
+		<tbody>
+			<tr><td><strong>Entrada</strong></td><td>Compras, devoluções de clientes, produção.</td><td>Quantidade positiva; fornecedor e referência opcionais.</td></tr>
+			<tr><td><strong>Saída</strong></td><td>Vendas fora da facturação, consumo interno, quebras.</td><td>Quantidade positiva e stock suficiente.</td></tr>
+			<tr><td><strong>Ajuste</strong></td><td>Corrigir divergências após contagem física.</td><td>Justificação obrigatória — é o que dá rasto à correcção.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		<strong>Movimentos</strong> lista tudo o que aconteceu, com data, tipo,
+		quantidade, motivo, referência e utilizador responsável. Um movimento errado
+		não se apaga: <strong>reverte-se</strong>, com justificação, ficando o registo
+		original e a reversão visíveis.
+	</p>
+
+	<h3>Alertas e relatório de inventário</h3>
+	<ul>
+		<li><strong>Stock baixo</strong> — notificação quando um produto atinge ou passa o mínimo. Avisa na transição, não a cada venda, para não repetir.</li>
+		<li><strong>Validade</strong> — notificação diária dos produtos com stock a expirar ou já expirados.</li>
+		<li><strong>Relatório de inventário</strong> — exportável em CSV e Excel, com SKU, nome, categoria, unidade, quantidade, stock mínimo, preço, valor em stock, validade, estado da validade e estado do produto. No Excel os números e as datas saem como números e datas, para poder somar, ordenar e filtrar na folha.</li>
+	</ul>
+</section>
+
+<!-- ══════════════════════════ 7 ══════════════════════════ -->
+<section id="tesouraria">
+	<h2>Módulo de Tesouraria</h2>
+
+	<p class="lead">
+		Como no stock, <strong>o saldo nunca se edita directamente</strong>: resulta
+		sempre dos movimentos registados.
+	</p>
+
+	<p class="mono" style="background:var(--primary-soft);padding:3mm 4mm;border-left:3px solid var(--primary);white-space:normal">
+		saldo = entradas − saídas ± transferências
+	</p>
+
+	<h3>Contas financeiras</h3>
+	<p>
+		Em <strong>Contas</strong> registe onde o dinheiro está. Há dois tipos:
+		<strong>Caixa</strong> (dinheiro físico) e <strong>Banco</strong> (conta
+		bancária). Cada conta tem nome, tipo, moeda e saldo, e pode autorizar ou não
+		saldo negativo.
+	</p>
+	<div class="note">
+		<span class="box-label">Regras das contas</span>
+		<p>
+			A moeda não se altera depois de a conta ter movimentos. Uma conta com
+			movimentos não é eliminada — desactive-a. Se a conta não autorizar saldo
+			negativo, um movimento que a deixasse abaixo de zero é recusado.
+		</p>
+	</div>
+
+	<h3>Categorias e centros de custo</h3>
+	<p>
+		<strong>Categorias</strong> classificam movimentos por natureza (vendas,
+		salários, rendas, combustíveis). <strong>Centros de Custo</strong> respondem a
+		outra pergunta: a que área, obra ou projecto o valor pertence. Usando os dois,
+		obtém uma leitura cruzada — quanto se gastou em cada natureza e em cada
+		centro.
+	</p>
+
+	<h3>Movimentos e transferências</h3>
+	<table>
+		<thead><tr><th style="width:24%">Tipo</th><th>Efeito</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Entrada</strong></td><td>Aumenta o saldo da conta.</td></tr>
+			<tr><td><strong>Saída</strong></td><td>Diminui o saldo da conta.</td></tr>
+			<tr><td><strong>Transferência</strong></td><td>Move valor entre duas contas, gerando as duas metades da operação — saída na origem, entrada no destino.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		Cada movimento leva conta, tipo, valor, data e descrição; categoria, centro de
+		custo e referência são opcionais. O sistema guarda sempre quem registou.
+	</p>
+
+	<h3>A receber e a pagar</h3>
+	<p>
+		<strong>A Receber</strong> reúne o que os clientes ainda devem;
+		<strong>A Pagar</strong>, os compromissos com fornecedores e outros. Servem
+		para antecipar a tesouraria dos próximos dias em vez de olhar apenas para o
+		saldo de hoje.
+	</p>
+
+	<h3>Reconciliação bancária</h3>
+	<p>
+		Em <strong>Reconciliação Bancária</strong> confronta o extracto do banco com os
+		movimentos registados na plataforma, caso a caso. Cada extracto evolui de
+		<strong>pendente</strong> a <strong>parcial</strong> e a
+		<strong>concluído</strong> à medida que as linhas são conciliadas, e o que
+		sobra de um lado ou do outro é exactamente o que precisa de explicação.
+	</p>
+
+	<h3>Alerta de saldo crítico</h3>
+	<p>
+		Uma verificação diária avisa quando uma conta activa que não autoriza saldo
+		negativo fica com saldo abaixo de zero. O aviso é enviado uma vez; quando o
+		saldo recupera, o alerta é reposto e poderá avisar de novo numa queda futura.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 8 ══════════════════════════ -->
+<section id="contabilidade">
+	<h2>Módulo de Contabilidade</h2>
+
+	<p class="lead">
+		A contabilidade segue o <strong>Plano Geral de Contabilidade de Angola</strong>,
+		aprovado pelo <strong>Decreto n.º 82/01, de 16 de Novembro</strong>. As classes
+		e a numeração das contas são as do decreto.
+	</p>
+
+	<h3>Plano de contas</h3>
+	<p>
+		Na primeira vez que acede à Contabilidade, a organização recebe
+		automaticamente o plano completo do PGC. Em <strong>Plano de Contas</strong>
+		vê-o agrupado pelas oito classes da contabilidade geral, e pode acrescentar
+		sub-contas próprias, renomear contas (por exemplo, indicar o banco concreto em
+		43.1) ou desactivar as que não usa.
+	</p>
+
+	<table>
+		<caption>As oito classes da contabilidade geral</caption>
+		<thead>
+			<tr><th style="width:12%">Classe</th><th style="width:44%">Designação</th><th>Contém, por exemplo</th></tr>
+		</thead>
+		<tbody>
+			<tr><td class="mono">1</td><td><strong>Meios Fixos e Investimentos</strong></td><td>11 Imobilizações corpóreas, 18 Amortizações acumuladas</td></tr>
+			<tr><td class="mono">2</td><td><strong>Existências</strong></td><td>21 Compras, 26 Mercadorias</td></tr>
+			<tr><td class="mono">3</td><td><strong>Terceiros</strong></td><td>31 Clientes, 32 Fornecedores, 34 Estado (inclui o IVA)</td></tr>
+			<tr><td class="mono">4</td><td><strong>Meios Monetários</strong></td><td>43 Depósitos à ordem, 45 Caixa</td></tr>
+			<tr><td class="mono">5</td><td><strong>Capital e Reservas</strong></td><td>51 Capital, 55 Reservas legais</td></tr>
+			<tr><td class="mono">6</td><td><strong>Proveitos e Ganhos por Natureza</strong></td><td>61 Vendas, 62 Prestações de serviços</td></tr>
+			<tr><td class="mono">7</td><td><strong>Custos e Perdas por Natureza</strong></td><td>71 Custo das mercadorias vendidas, 72 Custos com o pessoal</td></tr>
+			<tr><td class="mono">8</td><td><strong>Resultados</strong></td><td>81 Resultados transitados, 88 Resultado líquido do exercício</td></tr>
+		</tbody>
+	</table>
+
+	<div class="warn">
+		<span class="box-label">Importante para quem vem de outro sistema</span>
+		<p>
+			O Decreto 82/01 <strong>trocou as classes</strong> face ao plano anterior:
+			os Meios Monetários passaram da classe 1 para a 4, os Terceiros da 2 para a
+			3, as Existências da 3 para a 2, e os Custos e os Proveitos trocaram entre
+			si (6 e 7). Se está habituado à numeração antiga, confirme a classe antes
+			de lançar.
+		</p>
+	</div>
+
+	<h3>Consultar o decreto na plataforma</h3>
+	<p>
+		Em <strong>PGC (Decreto 82/01)</strong> consulta a lista oficial das contas do
+		decreto — não o plano da sua empresa. Pesquise por código ou por nome, veja a
+		hierarquia e o lado contabilístico de cada conta, e abra o texto integral do
+		decreto em PDF a partir do próprio ecrã.
+	</p>
+	<p>
+		Duas contas estão assinaladas com nota, por não constarem da lista original do
+		decreto e ocuparem linhas que o próprio diploma deixa em branco para serem
+		preenchidas:
+	</p>
+	<ul>
+		<li><strong>34.5 Imposto sobre o valor acrescentado</strong> e as suas sub-contas — o IVA foi criado em 2019, pela Lei n.º 7/19, depois do PGC.</li>
+		<li><strong>71.6 Mercadorias</strong> — o título da conta 71 abrange as mercadorias vendidas, mas a lista detalhada salta de 71.5 para 71.9.</li>
+	</ul>
+
+	<h3>Lançamentos manuais</h3>
+	<p>
+		Em <strong>Lançamentos</strong> registe as operações que não vêm da facturação:
+		salários, amortizações, regularizações de IVA, lançamentos de abertura. Cada
+		lançamento tem data, descrição e pelo menos duas linhas.
+	</p>
+	<p>Ao gravar, o sistema recusa o lançamento se:</p>
+	<ul>
+		<li>tiver menos de duas linhas;</li>
+		<li>a mesma linha tiver débito e crédito ao mesmo tempo;</li>
+		<li>alguma linha ficar sem valor;</li>
+		<li>o total do débito não igualar o total do crédito;</li>
+		<li>alguma conta estiver desactivada;</li>
+		<li>alguma conta <strong>agregar sub-contas</strong> — no PGC o movimento vai à conta mais desagregada, e uma conta com sub-contas serve para somar, não para receber lançamentos;</li>
+		<li>a data for futura.</li>
+	</ul>
+	<p>
+		O seletor de contas do formulário já mostra apenas contas movimentáveis, para
+		o problema não aparecer só ao gravar.
+	</p>
+	<div class="note">
+		<span class="box-label">Corrigir um lançamento</span>
+		<p>
+			Um lançamento não se apaga nem se edita: <strong>reverte-se</strong>. A
+			reversão cria um novo lançamento com os débitos e créditos invertidos e fica
+			ligada ao original, preservando o rasto de auditoria.
+		</p>
+	</div>
+
+	<h3>Lançamentos automáticos</h3>
+	<p>
+		Com a Contabilidade activa, os documentos de facturação geram lançamentos
+		sozinhos, identificados como <em>automáticos</em>:
+	</p>
+	<table>
+		<caption>O que cada documento lança</caption>
+		<thead>
+			<tr><th style="width:26%">Documento</th><th style="width:37%">Débito</th><th>Crédito</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><strong>Factura emitida</strong></td>
+				<td>31.1 Clientes, pelo total</td>
+				<td>61.3 Mercadorias e 62.1 Serviços, conforme as linhas; 34.5.3 IVA liquidado, pelo imposto</td>
+			</tr>
+			<tr>
+				<td><strong>Recibo emitido</strong></td>
+				<td>45.1 Caixa ou 43.1 Bancos, conforme a conta</td>
+				<td>31.1 Clientes</td>
+			</tr>
+			<tr>
+				<td><strong>Nota de crédito</strong></td>
+				<td>61.3 Mercadorias e 34.5.3 IVA liquidado</td>
+				<td>31.1 Clientes</td>
+			</tr>
+			<tr>
+				<td><strong>Factura cancelada</strong></td>
+				<td colspan="2">Reverte o lançamento original, invertendo débitos e créditos.</td>
+			</tr>
+		</tbody>
+	</table>
+	<p>
+		Estas contas estão assinaladas como «automáticas» no ecrã de consulta do PGC e
+		não podem ser eliminadas. O sistema garante que o mesmo documento não é lançado
+		duas vezes.
+	</p>
+
+	<h3>Demonstrações e consultas</h3>
+	<table>
+		<thead><tr><th style="width:30%">Ecrã</th><th>O que mostra</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Balancete</strong></td><td>Débito, crédito e saldo de cada conta no período, com a verificação de que o total do débito iguala o do crédito.</td></tr>
+			<tr><td><strong>Demonstração de Resultados</strong></td><td>Proveitos e custos do período e o resultado líquido.</td></tr>
+			<tr><td><strong>Balanço</strong></td><td>Activo, Passivo e Capital Próprio numa data. Inclui o resultado do período como linha do capital próprio, para o balanço fechar mesmo sem um fecho de exercício formal.</td></tr>
+			<tr><td><strong>Razão</strong></td><td>Todos os movimentos de uma conta por ordem cronológica, com saldo corrente. Acede-se a partir do balancete.</td></tr>
+		</tbody>
+	</table>
+</section>
+
+<!-- ══════════════════════════ 9 ══════════════════════════ -->
+<section id="integracao">
+	<h2>Integração automática entre módulos</h2>
+
+	<p class="lead">
+		Estando vários módulos activos, um documento emitido num deles desencadeia
+		reacções nos outros, sem qualquer intervenção manual. É o que evita registar a
+		mesma venda três vezes.
+	</p>
+
+	<table>
+		<caption>O que cada acontecimento desencadeia</caption>
+		<thead>
+			<tr><th style="width:26%">Acontecimento</th><th style="width:24%">Stock</th><th style="width:25%">Tesouraria</th><th>Contabilidade</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><strong>Factura emitida</strong></td>
+				<td>Dá baixa dos produtos vendidos</td>
+				<td>—</td>
+				<td>Lança clientes, vendas/serviços e IVA</td>
+			</tr>
+			<tr>
+				<td><strong>Recibo emitido</strong></td>
+				<td>—</td>
+				<td>Registra a entrada de dinheiro</td>
+				<td>Lança a cobrança do cliente</td>
+			</tr>
+			<tr>
+				<td><strong>Nota de crédito</strong></td>
+				<td>—</td>
+				<td>Registra a saída (reembolso)</td>
+				<td>Reverte o rédito e o IVA</td>
+			</tr>
+			<tr>
+				<td><strong>Factura cancelada</strong></td>
+				<td>Repõe o stock que tinha sido baixado</td>
+				<td>Estorna a entrada associada</td>
+				<td>Reverte o lançamento original</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h3>Módulos inactivos</h3>
+	<p>
+		Cada reacção verifica primeiro se o módulo de destino está activo na
+		subscrição. Não estando, o módulo de origem continua a funcionar normalmente e
+		a reacção é simplesmente ignorada. É por isso que uma empresa só com
+		Facturação trabalha sem qualquer limitação.
+	</p>
+	<div class="note">
+		<span class="box-label">Ao activar um módulo novo</span>
+		<p>
+			A integração aplica-se aos documentos emitidos <strong>a partir</strong> da
+			activação. Documentos anteriores não são reprocessados retroactivamente —
+			se precisar de os refletir, registe os movimentos ou lançamentos de
+			abertura correspondentes.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════════ 10 ══════════════════════════ -->
+<section id="notificacoes">
+	<h2>Notificações e alertas automáticos</h2>
+
+	<p class="lead">
+		O sino no topo da aplicação reúne as notificações da sua organização. Além dos
+		avisos gerados pelo seu próprio trabalho, uma verificação automática corre
+		<strong>uma vez por dia</strong> e avisa sobre quatro situações.
+	</p>
+
+	<table>
+		<caption>Verificações diárias</caption>
+		<thead>
+			<tr><th style="width:28%">Alerta</th><th style="width:40%">Condição</th><th>Comportamento</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><strong>Factura vencida</strong></td>
+				<td>Factura emitida, com pagamento pendente ou parcial, cuja data de vencimento passou.</td>
+				<td>Marca a factura como vencida e avisa uma vez.</td>
+			</tr>
+			<tr>
+				<td><strong>Saldo crítico</strong></td>
+				<td>Conta activa que não autoriza saldo negativo e está abaixo de zero.</td>
+				<td>Avisa uma vez; repõe-se quando o saldo recupera.</td>
+			</tr>
+			<tr>
+				<td><strong>Validade a terminar</strong></td>
+				<td>Produto com stock cuja validade cai nos próximos 30 dias.</td>
+				<td>Avisa uma vez por validade; volta a avisar se a data for alterada.</td>
+			</tr>
+			<tr>
+				<td><strong>Produto expirado</strong></td>
+				<td>Produto com stock cuja validade já passou.</td>
+				<td>Avisa uma vez, indicando há quantos dias expirou.</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<p>
+		O <strong>stock baixo</strong> é avisado no momento em que acontece, na
+		transição para abaixo do mínimo, e não na verificação diária.
+	</p>
+</section>
+
+<!-- ══════════════════════════ 11 ══════════════════════════ -->
+<section id="problemas">
+	<h2>Resolução de problemas</h2>
+
+	<table>
+		<thead>
+			<tr><th style="width:36%">Situação</th><th>O que fazer</th></tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><strong>«Não tem permissão para aceder a esta funcionalidade»</strong></td>
+				<td>O seu papel não inclui a permissão exigida. Peça ao administrador da sua organização para a acrescentar em <em>Funções &amp; Acesso</em>, ou para lhe atribuir um perfil adequado.</td>
+			</tr>
+			<tr>
+				<td><strong>Uma entrada do menu desapareceu</strong></td>
+				<td>Ou perdeu a permissão, ou o módulo deixou de estar activo na subscrição. Verifique o estado em <em>Gestão do Sistema › Subscrição</em>.</td>
+			</tr>
+			<tr>
+				<td><strong>Não consigo criar produtos nem emitir documentos</strong></td>
+				<td>Normalmente a subscrição não está activa. O ecrã indica o estado; regularize-o ou submeta um pedido de renovação.</td>
+			</tr>
+			<tr>
+				<td><strong>Errei numa factura já emitida</strong></td>
+				<td>Não é editável, por ser um documento fiscal. Emita uma nota de crédito, ou cancele a factura e emita uma nova.</td>
+			</tr>
+			<tr>
+				<td><strong>A quantidade em stock não corresponde à contagem física</strong></td>
+				<td>Registe um <em>ajuste</em> com justificação. Nunca tente corrigir a quantidade directamente — não é possível, e é o ajuste que deixa o rasto da correcção.</td>
+			</tr>
+			<tr>
+				<td><strong>«Estas contas agregam sub-contas e não recebem lançamentos directos»</strong></td>
+				<td>Escolheu uma conta que serve para somar. Lance na sub-conta respectiva — por exemplo, em 34.5.3 IVA liquidado e não em 34 Estado.</td>
+			</tr>
+			<tr>
+				<td><strong>O lançamento não fecha</strong></td>
+				<td>O total do débito tem de igualar o total do crédito. O formulário mostra os dois totais e indica quando está balanceado.</td>
+			</tr>
+			<tr>
+				<td><strong>Emiti uma factura e o stock não baixou</strong></td>
+				<td>Confirme que o módulo de Stock está activo na subscrição e que as linhas da factura têm produtos associados. Linhas de serviço não movimentam stock, por não terem existências.</td>
+			</tr>
+			<tr>
+				<td><strong>Perdi a senha</strong></td>
+				<td>Use <em>Esqueci a senha</em>. O link de redefinição é válido por uma hora; passado esse prazo, peça outro.</td>
+			</tr>
+			<tr>
+				<td><strong>Alteraram-me os acessos e não vejo a diferença</strong></td>
+				<td>A aplicação actualiza o perfil ao abrir e quando a janela ganha foco. Mude de janela e volte, ou recarregue a página.</td>
+			</tr>
+		</tbody>
+	</table>
+</section>
+
+<!-- ══════════════════════════ 12 ══════════════════════════ -->
+<section id="glossario">
+	<h2>Glossário</h2>
+
+	<table>
+		<thead><tr><th style="width:30%">Termo</th><th>Significado</th></tr></thead>
+		<tbody>
+			<tr><td><strong>AGT</strong></td><td>Administração Geral Tributária, a autoridade fiscal angolana.</td></tr>
+			<tr><td><strong>Ajuste</strong></td><td>Movimento de stock que corrige a quantidade após contagem física. Exige justificação.</td></tr>
+			<tr><td><strong>Balancete</strong></td><td>Resumo do débito, crédito e saldo de cada conta num período.</td></tr>
+			<tr><td><strong>Conta agregadora</strong></td><td>Conta contabilística com sub-contas. Serve para somar e não recebe lançamentos directos.</td></tr>
+			<tr><td><strong>Lado contabilístico</strong></td><td>Classificação da conta para as demonstrações: Activo, Passivo, Capital Próprio, Custo ou Proveito.</td></tr>
+			<tr><td><strong>Módulo</strong></td><td>Área funcional da plataforma (Facturação, Stock, Tesouraria, Contabilidade), activada pelo plano.</td></tr>
+			<tr><td><strong>Nota de crédito</strong></td><td>Documento que anula ou reduz o valor de uma factura emitida.</td></tr>
+			<tr><td><strong>Organização</strong></td><td>A empresa cliente. Todos os dados pertencem a uma organização e ficam isolados das restantes.</td></tr>
+			<tr><td><strong>Papel</strong></td><td>Conjunto de permissões atribuído a um utilizador (Facturista, Tesoureiro, etc.).</td></tr>
+			<tr><td><strong>Permissão</strong></td><td>Autorização para uma acção concreta, como «criar factura».</td></tr>
+			<tr><td><strong>PGC</strong></td><td>Plano Geral de Contabilidade de Angola, aprovado pelo Decreto n.º 82/01, de 16 de Novembro.</td></tr>
+			<tr><td><strong>POS</strong></td><td>Posto de Venda: ecrã de venda rápida ao balcão.</td></tr>
+			<tr><td><strong>Proforma</strong></td><td>Documento de orçamento, sem valor fiscal, que pode dar origem a uma factura.</td></tr>
+			<tr><td><strong>Rascunho</strong></td><td>Documento ainda editável, sem número oficial nem valor fiscal.</td></tr>
+			<tr><td><strong>Razão</strong></td><td>Extracto cronológico de todos os movimentos de uma conta, com saldo corrente.</td></tr>
+			<tr><td><strong>Reversão</strong></td><td>Lançamento ou movimento que anula outro, invertendo-o, sem apagar o original.</td></tr>
+			<tr><td><strong>Série de documentos</strong></td><td>Configuração de numeração sequencial dos documentos fiscais, por ano.</td></tr>
+			<tr><td><strong>SKU</strong></td><td>Código único do produto dentro da organização.</td></tr>
+			<tr><td><strong>Subscrição</strong></td><td>Contrato que determina os módulos disponíveis e o estado da conta.</td></tr>
+		</tbody>
+	</table>
+
+	<div class="end">
+		Manual do Utilizador — Mpamba ERP · Setembro de 2026<br>
+		Plano de contas em conformidade com o Decreto n.º 82/01, de 16 de Novembro
+	</div>
+</section>
+
+</body>
+</html>
