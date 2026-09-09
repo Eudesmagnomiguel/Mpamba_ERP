@@ -34,6 +34,8 @@ export interface Product {
 	currentQuantity: number;
 	minStock?: number | null;
 	maxStock?: number | null;
+	/** Validade do produto; null nos produtos que não expiram. */
+	expiryDate?: string | null;
 	categoryId?: string | null;
 	category?: Category | null;
 	organizationId: string;
@@ -72,6 +74,8 @@ export interface StockMovement {
 export interface StockSummary {
 	totalProducts: number;
 	lowStockItems: number;
+	expiredItems: number;
+	expiringSoonItems: number;
 	totalQuantity: number;
 	totalInventoryValue: number;
 	evolutionData: Array<{ name: string; value: number }>;

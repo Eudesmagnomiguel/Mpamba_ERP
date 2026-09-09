@@ -1,5 +1,19 @@
 import { z } from 'zod';
 
+/**
+ * Validade do produto. `null` (ou '', o que um input de data vazio devolve)
+ * significa «sem validade» e limpa uma validade já definida.
+ *
+ * Sem `.transform()` de propósito: transformar faria o tipo de entrada diferir
+ * do de saída, e o zodResolver do react-hook-form deixaria de casar com o
+ * tipo do formulário.
+ */
+const optionalExpiryDate = z
+	.string()
+	.refine((value) => value === '' || !Number.isNaN(Date.parse(value)), 'Data de validade inválida')
+	.nullable()
+	.optional();
+
 export const CreateProductSchema = z.object({
 	name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
 	sku: z.string().min(1, 'SKU é obrigatório'),
@@ -9,6 +23,7 @@ export const CreateProductSchema = z.object({
 	quantity: z.number().min(0).optional(),
 	minStock: z.number().min(0).optional(),
 	maxStock: z.number().min(0).optional(),
+	expiryDate: optionalExpiryDate,
 	categoryId: z.string().uuid('Categoria inválida').optional().nullable(),
 }).refine(
 	(data) => data.maxStock === undefined || data.minStock === undefined || data.maxStock >= data.minStock,
@@ -26,6 +41,7 @@ export const UpdateProductSchema = z.object({
 	price: z.number().min(0).optional(),
 	minStock: z.number().min(0).optional(),
 	maxStock: z.number().min(0).optional(),
+	expiryDate: optionalExpiryDate,
 	categoryId: z.string().uuid('Categoria inválida').optional().nullable(),
 	isActive: z.boolean().optional(),
 }).refine(

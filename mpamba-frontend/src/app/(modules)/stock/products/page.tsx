@@ -29,6 +29,12 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/shared/types/stock.types';
+import {
+	EXPIRY_STATUS_CLASSES,
+	expiryStatusLabel,
+	expiryStatusOf,
+	formatExpiryDate,
+} from '@/shared/utils/stock.utils';
 import { useStockProducts, useDeleteStockProduct } from '@/hooks/module/stock';
 
 import { useHasPermission } from '@/hooks/core/usePermission';
@@ -116,6 +122,7 @@ export default function ProductsPage() {
 								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Unid.</th>
 								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Preço</th>
 								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Stock Atual</th>
+								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Validade</th>
 								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Status</th>
 								<th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Ações</th>
 							</tr>
@@ -123,7 +130,7 @@ export default function ProductsPage() {
 						<tbody className="divide-y divide-slate-100">
 							{isLoading ? (
 								<tr>
-									<td colSpan={7} className="px-6 py-20 text-center">
+									<td colSpan={8} className="px-6 py-20 text-center">
 										<div className="flex flex-col items-center gap-3">
 											<Loader2 size={32} className="text-primary animate-spin" />
 											<p className="text-sm font-medium text-slate-500">Carregando produtos...</p>
@@ -132,7 +139,7 @@ export default function ProductsPage() {
 								</tr>
 							) : error ? (
 								<tr>
-									<td colSpan={7} className="px-6 py-20 text-center">
+									<td colSpan={8} className="px-6 py-20 text-center">
 										<div className="flex flex-col items-center gap-3 text-rose-500">
 											<AlertCircle size={32} />
 											<p className="text-sm font-medium">Erro ao carregar produtos. Tente novamente.</p>
@@ -174,6 +181,21 @@ export default function ProductsPage() {
 												)}>
 													{product.currentQuantity}
 												</span>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-center">
+												{product.expiryDate ? (
+													<div className="flex flex-col items-center gap-1">
+														<span className="text-sm text-slate-600">{formatExpiryDate(product.expiryDate)}</span>
+														<span className={cn(
+															"inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
+															EXPIRY_STATUS_CLASSES[expiryStatusOf(product.expiryDate)]
+														)}>
+															{expiryStatusLabel(product.expiryDate)}
+														</span>
+													</div>
+												) : (
+													<span className="text-sm text-slate-400">—</span>
+												)}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-center">
 												<div className={cn(
@@ -224,7 +246,7 @@ export default function ProductsPage() {
 								})
 							) : (
 								<tr>
-									<td colSpan={7} className="px-6 py-20 text-center">
+									<td colSpan={8} className="px-6 py-20 text-center">
 										<div className="flex flex-col items-center gap-2">
 											<div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
 												<Search size={24} />

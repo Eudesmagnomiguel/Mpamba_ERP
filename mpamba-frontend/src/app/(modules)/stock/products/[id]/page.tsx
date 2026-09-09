@@ -20,6 +20,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import {
+	EXPIRY_STATUS_CLASSES,
+	expiryStatusLabel,
+	expiryStatusOf,
+	formatExpiryDate,
+} from '@/shared/utils/stock.utils';
 import { useStockProduct, useStockMovements } from '@/hooks/module/stock';
 
 export default function ProductDetailPage() {
@@ -137,6 +143,22 @@ export default function ProductDetailPage() {
 							<div className="space-y-1">
 								<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Stock Máximo</p>
 								<p className="font-bold text-slate-900">{product.maxStock != null ? `${product.maxStock} ${product.unit}` : 'Não definido'}</p>
+							</div>
+							<div className="space-y-1">
+								<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Data de Validade</p>
+								{product.expiryDate ? (
+									<div className="flex items-center gap-2">
+										<p className="font-bold text-slate-900">{formatExpiryDate(product.expiryDate)}</p>
+										<span className={cn(
+											"inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
+											EXPIRY_STATUS_CLASSES[expiryStatusOf(product.expiryDate)]
+										)}>
+											{expiryStatusLabel(product.expiryDate)}
+										</span>
+									</div>
+								) : (
+									<p className="font-medium text-slate-500">Não expira</p>
+								)}
 							</div>
 							<div className="space-y-1 md:col-span-2">
 								<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Descrição</p>

@@ -51,6 +51,7 @@ export default function NewProductPage() {
 			quantity: 0,
 			minStock: 0,
 			maxStock: undefined,
+			expiryDate: null,
 			description: '',
 			categoryId: null,
 		},
@@ -244,6 +245,23 @@ export default function NewProductPage() {
 											error={errors.maxStock?.message}
 											disabled={isPending}
 											onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+										/>
+									)}
+								/>
+
+								<Controller
+									name="expiryDate"
+									control={control}
+									render={({ field }) => (
+										<Input
+											{...field}
+											value={field.value ?? ''}
+											type="date"
+											label="Data de Validade"
+											helperText="Deixe vazio se o produto não expira."
+											error={errors.expiryDate?.message}
+											disabled={isPending}
+											onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
 										/>
 									)}
 								/>

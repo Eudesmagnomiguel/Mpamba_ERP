@@ -10,7 +10,8 @@ import {
 	BarChart3,
 	Loader2,
 	FileSpreadsheet,
-	FileText
+	FileText,
+	CalendarClock
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -73,6 +74,8 @@ export default function StockPage() {
 	const stats = summary || {
 		totalProducts: 0,
 		lowStockItems: 0,
+		expiredItems: 0,
+		expiringSoonItems: 0,
 		totalQuantity: 0,
 		totalInventoryValue: 0,
 		evolutionData: [],
@@ -118,6 +121,29 @@ export default function StockPage() {
 					</Button>
 				</div>
 			</div>
+
+			{stats.expiredItems + stats.expiringSoonItems > 0 ? (
+				<Link
+					href="/stock/products"
+					className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+				>
+					<CalendarClock size={18} className="shrink-0" />
+					<span className="font-medium">
+						{stats.expiredItems > 0 ? (
+							<>
+								<strong>{stats.expiredItems}</strong> {stats.expiredItems === 1 ? 'produto expirado' : 'produtos expirados'}
+							</>
+						) : null}
+						{stats.expiredItems > 0 && stats.expiringSoonItems > 0 ? ' · ' : null}
+						{stats.expiringSoonItems > 0 ? (
+							<>
+								<strong>{stats.expiringSoonItems}</strong> {stats.expiringSoonItems === 1 ? 'produto expira' : 'produtos expiram'} nos próximos 30 dias
+							</>
+						) : null}
+					</span>
+					<span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-wider">Ver produtos</span>
+				</Link>
+			) : null}
 
 			{/* Main KPI Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

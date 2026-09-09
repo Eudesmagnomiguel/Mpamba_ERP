@@ -273,6 +273,11 @@ model Product {
   currentQuantity Float            @default(0)
   minStock        Float?           @default(0)
   maxStock        Float?
+  // Validade do produto. Um produto sem validade (nao pereciveis) fica a null.
+  // expiryAlertedAt evita que o alerta diario repita o mesmo aviso; e reposto a
+  // null quando a validade e alterada.
+  expiryDate      DateTime?
+  expiryAlertedAt DateTime?
   organizationId  String
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -282,6 +287,7 @@ model Product {
   movements       StockMovement[]
 
   @@unique([sku, organizationId])
+  @@index([organizationId, expiryDate])
 }
 
 model StockMovement {

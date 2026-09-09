@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.config.js';
 import { BaseStockService } from './base.service.js';
 import type { CreateProductDto, UpdateProductDto } from '../../../shared/dto/stock.dto.js';
 import { NotificationService } from '../../core/notification.service.js';
+import { EXPIRY_STATUS_LABELS, expiryDateBounds, expiryStatusOf } from './expiry.constants.js';
 
 const IMMUTABLE_PRODUCT_FIELDS = ['currentQuantity'] as const;
 
@@ -130,6 +131,14 @@ export class ProductService extends BaseStockService {
 		const { ...safeData } = data as any;
 		delete safeData.currentQuantity;
 
+		// Uma validade nova (ou removida) é um aviso novo: limpar o registo do
+		// alerta deixa o AlertsService voltar a notificar quando for o caso.
+		if (safeData.expiryDate !== undefined) {
+			const previous = product.expiryDate ? product.expiryDate.getTime() : null;
+			const next = safeData.expiryDate ? new Date(safeData.expiryDate).getTime() : null;
+			if (previous !== next) safeData.expiryAlertedAt = null;
+		}
+
 		return prisma.product.update({ 
 			where: { id }, 
 			data: safeData,
@@ -156,7 +165,9 @@ export class ProductService extends BaseStockService {
 	async getStockSummary() {
 		const orgId = this.orgId;
 
-		const [totalProducts, lowStockItems, totalValueResult] = await Promise.all([
+		const { expiredBefore, warningUntil } = expiryDateBounds();
+
+		const [totalProducts, lowStockItems, totalValueResult, expiredItems, expiringSoonItems] = await Promise.all([
 			prisma.product.count({ where: { organizationId: orgId, isActive: true } }),
 			prisma.product.count({
 				where: {
@@ -173,7 +184,17 @@ export class ProductService extends BaseStockService {
 				_sum: {
 					currentQuantity: true,
 				}
-			})
+			}),
+			prisma.product.count({
+				where: { organizationId: orgId, isActive: true, expiryDate: { lt: expiredBefore } },
+			}),
+			prisma.product.count({
+				where: {
+					organizationId: orgId,
+					isActive: true,
+					expiryDate: { gte: expiredBefore, lte: warningUntil },
+				},
+			}),
 		]);
 
 		const products = await prisma.product.findMany({
@@ -223,6 +244,8 @@ export class ProductService extends BaseStockService {
 		return {
 			totalProducts,
 			lowStockItems,
+			expiredItems,
+			expiringSoonItems,
 			totalQuantity: totalValueResult._sum.currentQuantity || 0,
 			totalInventoryValue,
 			categoryData,
@@ -314,6 +337,8 @@ export class ProductService extends BaseStockService {
 			minStock: p.minStock ?? 0,
 			price: p.price ?? 0,
 			stockValue: (p.price ?? 0) * p.currentQuantity,
+			expiryDate: p.expiryDate,
+			expiryStatus: EXPIRY_STATUS_LABELS[expiryStatusOf(p.expiryDate)],
 			status: p.isActive ? 'Ativo' : 'Inativo',
 		}));
 	}
@@ -324,7 +349,7 @@ export class ProductService extends BaseStockService {
 
 		const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
-		const header = ['SKU', 'Nome', 'Categoria', 'Unidade', 'Quantidade Atual', 'Stock Mínimo', 'Preço Unitário', 'Valor em Stock', 'Estado'];
+		const header = ['SKU', 'Nome', 'Categoria', 'Unidade', 'Quantidade Atual', 'Stock Mínimo', 'Preço Unitário', 'Valor em Stock', 'Validade', 'Estado da Validade', 'Estado'];
 		const body = rows.map((r) => [
 			r.sku,
 			r.name,
@@ -334,6 +359,8 @@ export class ProductService extends BaseStockService {
 			String(r.minStock),
 			String(r.price),
 			String(r.stockValue),
+			r.expiryDate ? r.expiryDate.toISOString().slice(0, 10) : '',
+			r.expiryStatus,
 			r.status,
 		]);
 
@@ -352,6 +379,8 @@ export interface InventoryReportRow {
 	minStock: number;
 	price: number;
 	stockValue: number;
+	expiryDate: Date | null;
+	expiryStatus: string;
 	status: string;
 }
 

@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 // ─── Product ────────────────────────────────────────────────────────────────
 
+/**
+ * Validade do produto. O input de data do formulário devolve '' quando está
+ * vazio, e `z.coerce.date()` converteria isso num Invalid Date em vez de o
+ * tratar como «sem validade». `null` limpa uma validade já definida.
+ */
+const optionalExpiryDate = z.preprocess(
+	(value) => (value === '' || value === null ? null : value),
+	z.coerce.date().nullable().optional()
+);
+
 export const createProductSchema = z.object({
 	name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
 	sku: z.string().min(1, 'SKU é obrigatório'),
@@ -11,6 +21,7 @@ export const createProductSchema = z.object({
 	quantity: z.number().min(0).optional(),
 	minStock: z.number().min(0).optional(),
 	maxStock: z.number().min(0).optional(),
+	expiryDate: optionalExpiryDate,
 	categoryId: z.string().uuid().optional(),
 }).refine(
 	(data) => data.maxStock === undefined || data.minStock === undefined || data.maxStock >= data.minStock,
@@ -28,6 +39,7 @@ export const updateProductSchema = z.object({
 	price: z.number().min(0).optional(),
 	minStock: z.number().min(0).optional(),
 	maxStock: z.number().min(0).optional(),
+	expiryDate: optionalExpiryDate,
 	isActive: z.boolean().optional(),
 	categoryId: z.string().uuid().optional(),
 }).refine(

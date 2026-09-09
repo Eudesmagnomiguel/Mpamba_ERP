@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useMySubscription } from '@/hooks/core/useSubscription';
 import { useStockProduct, useUpdateStockProduct, useStockCategories, useAddStock } from '@/hooks/module/stock';
 import { UpdateProductSchema, UpdateProductDto } from '@/shared/dto/stock.dto';
+import { toExpiryInputValue } from '@/shared/utils/stock.utils';
 
 const unitOptions = [
 	{ value: 'UN', label: 'Unidade' },
@@ -83,6 +84,7 @@ export default function EditProductPage() {
 			price: 0,
 			minStock: 0,
 			maxStock: undefined,
+			expiryDate: null,
 			description: '',
 			categoryId: null,
 			isActive: true,
@@ -98,6 +100,7 @@ export default function EditProductPage() {
 				price: product.price ?? 0,
 				minStock: product.minStock ?? 0,
 				maxStock: product.maxStock ?? undefined,
+				expiryDate: toExpiryInputValue(product.expiryDate) || null,
 				description: product.description ?? '',
 				categoryId: product.categoryId ?? null,
 				isActive: product.isActive,
@@ -363,6 +366,23 @@ export default function EditProductPage() {
 											error={errors.maxStock?.message}
 											disabled={isPending}
 											onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+										/>
+									)}
+								/>
+
+								<Controller
+									name="expiryDate"
+									control={control}
+									render={({ field }) => (
+										<Input
+											{...field}
+											value={field.value ?? ''}
+											type="date"
+											label="Data de Validade"
+											helperText="Deixe vazio se o produto não expira."
+											error={errors.expiryDate?.message}
+											disabled={isPending}
+											onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
 										/>
 									)}
 								/>

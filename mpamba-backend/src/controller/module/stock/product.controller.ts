@@ -127,6 +127,8 @@ export class ProductController {
 				{ header: 'Stock Mínimo', value: (r) => r.minStock, type: 'number', width: 16 },
 				{ header: 'Preço Unitário', value: (r) => r.price, type: 'currency', width: 18 },
 				{ header: 'Valor em Stock', value: (r) => r.stockValue, type: 'currency', width: 20 },
+				{ header: 'Validade', value: (r) => r.expiryDate, type: 'date', width: 14 },
+				{ header: 'Estado da Validade', value: (r) => r.expiryStatus, width: 18 },
 				{ header: 'Estado', value: (r) => r.status, width: 12 },
 			];
 
