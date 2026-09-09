@@ -2,6 +2,7 @@ import {
 	LayoutDashboard,
 	BookOpen,
 	ListTree,
+	BookMarked,
 	Scale,
 	TrendingUp,
 	Landmark,
@@ -22,6 +23,7 @@ export const accountingConfig: LayoutConfig = {
 	routeLabels: {
 		contabilidade: 'Início',
 		accounts: 'Plano de Contas',
+		pgc: 'PGC (Decreto 82/01)',
 		entries: 'Lançamentos',
 		reports: 'Relatórios',
 		'trial-balance': 'Balancete',
@@ -43,6 +45,7 @@ export const accountingConfig: LayoutConfig = {
 			label: 'Contabilidade',
 			items: [
 				{ name: 'Plano de Contas', href: '/contabilidade/accounts', icon: ListTree, permission: PERMISSIONS.ACCOUNTING_ACCOUNT_VIEW },
+				{ name: 'PGC (Decreto 82/01)', href: '/contabilidade/pgc', icon: BookMarked, permission: PERMISSIONS.ACCOUNTING_ACCOUNT_VIEW },
 				{ name: 'Lançamentos', href: '/contabilidade/entries', icon: BookOpen, permission: PERMISSIONS.ACCOUNTING_ENTRY_VIEW },
 				{ name: 'Balancete', href: '/contabilidade/reports/trial-balance', icon: Scale, permission: PERMISSIONS.ACCOUNTING_REPORT_VIEW },
 				{ name: 'Demonstração de Resultados', href: '/contabilidade/reports/income-statement', icon: TrendingUp, permission: PERMISSIONS.ACCOUNTING_REPORT_VIEW },

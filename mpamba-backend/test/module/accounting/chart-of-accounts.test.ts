@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	DEFAULT_ACCOUNTS,
 	ANCHOR_ACCOUNT_CODES,
@@ -7,6 +7,13 @@ import {
 	compareAccountCodes,
 } from '../../../src/services/module/accounting/default-accounts.constants.js';
 import { ACCOUNT_CODE_PATTERN } from '../../../src/shared/dto/accounting.dto.js';
+import { accountingAccountService } from '../../../src/services/module/accounting/account.service.js';
+
+// getPgcReference nao toca na base de dados, mas importar o servico traz o
+// cliente Prisma; o mock evita abrir uma conexao no teste.
+vi.mock('../../../src/config/prisma.config.js', () => ({
+	prisma: { accountingAccount: { findMany: vi.fn(), count: vi.fn() }, journalEntryLine: { count: vi.fn() } },
+}));
 
 describe('Plano de contas do PGC-Angola (Decreto n.º 82/01)', () => {
 	const codes = DEFAULT_ACCOUNTS.map((account) => account.code);
@@ -116,5 +123,62 @@ describe('compareAccountCodes', () => {
 
 	it('ordena as classes por ordem crescente', () => {
 		expect(['71', '11', '45.1', '31.1'].sort(compareAccountCodes)).toEqual(['11', '31.1', '45.1', '71']);
+	});
+});
+
+describe('getPgcReference', () => {
+	const reference = accountingAccountService.getPgcReference();
+
+	it('identifica o diploma', () => {
+		expect(reference.decree.reference).toContain('82/01');
+	});
+
+	it('devolve as oito classes por ordem, cada uma com o seu título', () => {
+		expect(reference.classes.map((group) => group.class)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+		expect(reference.classes[3]!.label).toBe('Meios Monetários');
+		expect(reference.classes[5]!.label).toBe('Proveitos e Ganhos por Natureza');
+	});
+
+	it('inclui todas as contas do plano, sem perder nenhuma na divisão por classe', () => {
+		const total = reference.classes.reduce((sum, group) => sum + group.accounts.length, 0);
+		expect(total).toBe(reference.totalAccounts);
+		expect(total).toBe(DEFAULT_ACCOUNTS.length);
+	});
+
+	it('só coloca cada conta na classe do seu primeiro dígito', () => {
+		for (const group of reference.classes) {
+			for (const account of group.accounts) {
+				expect(accountClassOf(account.code)).toBe(group.class);
+			}
+		}
+	});
+
+	it('dá o nível hierárquico e a conta-mãe de cada conta', () => {
+		const iva = reference.classes
+			.find((group) => group.class === 3)!
+			.accounts.find((account) => account.code === '34.5.3')!;
+		expect(iva.level).toBe(2);
+		expect(iva.parentCode).toBe('34.5');
+
+		const estado = reference.classes.find((group) => group.class === 3)!.accounts.find((a) => a.code === '34')!;
+		expect(estado.level).toBe(0);
+		expect(estado.parentCode).toBeNull();
+	});
+
+	it('anota as contas que ocupam linhas em branco do decreto', () => {
+		const noted = reference.classes
+			.flatMap((group) => group.accounts)
+			.filter((account) => account.note !== null)
+			.map((account) => account.code);
+		expect(noted).toEqual(['34.5', '71.6']);
+	});
+
+	it('marca as contas usadas pelos lançamentos automáticos', () => {
+		const anchors = reference.classes
+			.flatMap((group) => group.accounts)
+			.filter((account) => account.isAnchor)
+			.map((account) => account.code)
+			.sort();
+		expect(anchors).toEqual([...Object.values(ANCHOR_ACCOUNT_CODES)].sort());
 	});
 });

@@ -16,6 +16,32 @@ export interface AccountingAccount {
 	updatedAt: string;
 }
 
+/** Uma conta da lista oficial do PGC, para consulta. */
+export interface PgcReferenceAccount {
+	code: string;
+	name: string;
+	side: AccountSide;
+	parentCode: string | null;
+	/** Profundidade na hierarquia: 34 → 0, 34.5 → 1, 34.5.3 → 2. */
+	level: number;
+	/** Nota das contas que não constam da lista do decreto. */
+	note: string | null;
+	/** Conta usada pelos lançamentos automáticos da plataforma. */
+	isAnchor: boolean;
+}
+
+export interface PgcReferenceClass {
+	class: number;
+	label: string;
+	accounts: PgcReferenceAccount[];
+}
+
+export interface PgcReference {
+	decree: { title: string; reference: string; note: string };
+	totalAccounts: number;
+	classes: PgcReferenceClass[];
+}
+
 export interface JournalEntryLine {
 	id: string;
 	entryId: string;

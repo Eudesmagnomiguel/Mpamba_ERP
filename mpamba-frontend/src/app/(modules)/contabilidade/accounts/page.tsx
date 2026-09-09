@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
 	ListTree,
 	Plus,
@@ -159,7 +160,12 @@ export default function AccountingAccountsPage() {
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 				<div>
 					<h1 className="text-2xl font-bold text-slate-900 tracking-tight">Plano de Contas</h1>
-					<p className="text-slate-500 text-sm mt-1">Estrutura contabilística da organização (classes 1 a 8).</p>
+					<p className="text-slate-500 text-sm mt-1">
+						Estrutura contabilística da organização, segundo o PGC-Angola (classes 1 a 8).{' '}
+						<Link href="/contabilidade/pgc" className="font-semibold text-primary hover:underline">
+							Consultar o decreto
+						</Link>
+					</p>
 				</div>
 				<Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary text-white gap-2 h-11 px-5 rounded-sm">
 					<Plus size={16} />

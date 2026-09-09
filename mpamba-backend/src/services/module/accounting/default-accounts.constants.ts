@@ -4,6 +4,8 @@ export interface DefaultAccountTemplate {
 	code: string;
 	name: string;
 	side: AccountSide;
+	/** Nota de consulta, para as contas que não constam da lista do decreto. */
+	note?: string;
 }
 
 /**
@@ -116,7 +118,12 @@ export const DEFAULT_ACCOUNTS: DefaultAccountTemplate[] = [
 	{ code: '34.3', name: 'Imposto de rendimento de trabalho', side: 'PASSIVO' },
 	{ code: '34.4', name: 'Imposto de circulação', side: 'PASSIVO' },
 	// 34.5 — linha em branco do decreto, preenchida com o IVA (Lei n.º 7/19)
-	{ code: '34.5', name: 'Imposto sobre o valor acrescentado', side: 'PASSIVO' },
+	{
+		code: '34.5',
+		name: 'Imposto sobre o valor acrescentado',
+		side: 'PASSIVO',
+		note: 'Linha em branco do decreto. O IVA foi criado em 2019 pela Lei n.º 7/19, depois do PGC, e ocupa a linha 34.5, vaga entre 34.4 e 34.8.',
+	},
 	{ code: '34.5.1', name: 'IVA suportado', side: 'ATIVO' },
 	{ code: '34.5.2', name: 'IVA dedutível', side: 'ATIVO' },
 	{ code: '34.5.3', name: 'IVA liquidado', side: 'PASSIVO' },
@@ -249,7 +256,12 @@ export const DEFAULT_ACCOUNTS: DefaultAccountTemplate[] = [
 	{ code: '71.4', name: 'Embalagens de consumo', side: 'CUSTO' },
 	{ code: '71.5', name: 'Outros materiais', side: 'CUSTO' },
 	// 71.6 — linha em branco do decreto; o título da conta 71 abrange mercadorias
-	{ code: '71.6', name: 'Mercadorias', side: 'CUSTO' },
+	{
+		code: '71.6',
+		name: 'Mercadorias',
+		side: 'CUSTO',
+		note: 'Linha em branco do decreto. O título da conta 71 abrange as mercadorias vendidas, mas a lista detalhada salta de 71.5 para 71.9.',
+	},
 
 	{ code: '72', name: 'Custos com o pessoal', side: 'CUSTO' },
 	{ code: '72.1', name: 'Remunerações – Órgãos sociais', side: 'CUSTO' },
@@ -343,6 +355,27 @@ export const DEFAULT_ACCOUNTS: DefaultAccountTemplate[] = [
 	{ code: '88', name: 'Resultado líquido do exercício', side: 'CAPITAL_PROPRIO' },
 	{ code: '89', name: 'Dividendos antecipados', side: 'CAPITAL_PROPRIO' },
 ];
+
+/** Títulos das classes da contabilidade geral, como constam do decreto. */
+export const PGC_CLASS_LABELS: Record<number, string> = {
+	1: 'Meios Fixos e Investimentos',
+	2: 'Existências',
+	3: 'Terceiros',
+	4: 'Meios Monetários',
+	5: 'Capital e Reservas',
+	6: 'Proveitos e Ganhos por Natureza',
+	7: 'Custos e Perdas por Natureza',
+	8: 'Resultados',
+};
+
+/** Diploma que estabelece este plano de contas. */
+export const PGC_DECREE = {
+	title: 'Plano Geral de Contabilidade',
+	reference: 'Decreto n.º 82/01, de 16 de Novembro',
+	note:
+		'As classes seguem a ordem do decreto, que as trocou face ao plano anterior. ' +
+		'A classe 0 (contas de ordem) e a classe 9 (contabilidade analítica) são de uso facultativo e não constam desta lista.',
+} as const;
 
 /** Classe (1 a 8) a que o código pertence — é sempre o seu primeiro dígito. */
 export function accountClassOf(code: string): number {

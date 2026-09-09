@@ -11,6 +11,18 @@ export const useAccountingAccounts = (options?: QueryOptions) => {
 	});
 };
 
+/**
+ * Lista oficial do PGC. É igual para todas as organizações e não muda entre
+ * versões da aplicação, por isso fica em cache sem refetch.
+ */
+export const useAccountingPgcReference = () => {
+	return useQuery({
+		queryKey: ['accounting-pgc-reference'],
+		queryFn: () => accountingAccountService.getPgcReference(),
+		staleTime: Infinity,
+	});
+};
+
 export const useAccountingAccount = (id: string) => {
 	return useQuery({
 		queryKey: ['accounting-account', id],

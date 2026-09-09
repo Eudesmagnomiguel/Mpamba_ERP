@@ -13,6 +13,15 @@ export class AccountingAccountController {
 		}
 	}
 
+	/** Lista oficial do PGC para consulta — GET /accounting/accounts/pgc */
+	async pgcReference(req: AuthRequest, res: Response) {
+		try {
+			res.json({ data: accountingAccountService.getPgcReference() });
+		} catch (error: any) {
+			res.status(500).json({ message: error.message });
+		}
+	}
+
 	async getById(req: AuthRequest, res: Response) {
 		try {
 			const account = await accountingAccountService.getAccountById(req.params.id as string);

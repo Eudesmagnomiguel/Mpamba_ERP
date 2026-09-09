@@ -1,10 +1,16 @@
 import apiClient from '@/shared/utils/api.utils';
 import { CreateAccountingAccountDto, UpdateAccountingAccountDto } from '@/shared/dto/accounting.dto';
-import { AccountingAccount } from '@/shared/types/accounting.types';
+import { AccountingAccount, PgcReference } from '@/shared/types/accounting.types';
 
 export const accountingAccountService = {
 	async listAccounts() {
 		const response = await apiClient.get<{ data: AccountingAccount[] }>('/accounting/accounts');
+		return response.data.data;
+	},
+
+	/** Lista oficial do PGC (Decreto n.º 82/01), para consulta. */
+	async getPgcReference() {
+		const response = await apiClient.get<{ data: PgcReference }>('/accounting/accounts/pgc');
 		return response.data.data;
 	},
 

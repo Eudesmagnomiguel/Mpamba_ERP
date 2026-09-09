@@ -3,6 +3,8 @@ import { BaseAccountingService } from './base.service.js';
 import {
 	DEFAULT_ACCOUNTS,
 	ANCHOR_ACCOUNT_CODES,
+	PGC_CLASS_LABELS,
+	PGC_DECREE,
 	accountClassOf,
 	parentCodeOf,
 	compareAccountCodes,
@@ -133,6 +135,40 @@ export class AccountingAccountService extends BaseAccountingService {
 		// A ordenação é feita aqui e não em SQL porque `ORDER BY code` é textual e
 		// colocaria 75.2.11 antes de 75.2.9, e 68.10 antes de 68.9.
 		return accounts.sort((a, b) => compareAccountCodes(a.code, b.code));
+	}
+
+	/**
+	 * O plano de contas do PGC para consulta, agrupado por classe.
+	 *
+	 * É a lista oficial do decreto e não o plano da organização — não lê a base
+	 * de dados e é igual para todas as organizações. Serve o ecrã de consulta,
+	 * onde se procura uma conta pelo código ou pelo nome antes de a usar num
+	 * lançamento.
+	 */
+	getPgcReference() {
+		const classes = Object.keys(PGC_CLASS_LABELS)
+			.map(Number)
+			.sort((a, b) => a - b)
+			.map((accountClass) => ({
+				class: accountClass,
+				label: PGC_CLASS_LABELS[accountClass]!,
+				accounts: DEFAULT_ACCOUNTS.filter((template) => accountClassOf(template.code) === accountClass).map((template) => ({
+					code: template.code,
+					name: template.name,
+					side: template.side,
+					parentCode: parentCodeOf(template.code) ?? null,
+					// Profundidade na hierarquia: 34 → 0, 34.5 → 1, 34.5.3 → 2.
+					level: template.code.split('.').length - 1,
+					note: template.note ?? null,
+					isAnchor: Object.values(ANCHOR_ACCOUNT_CODES).includes(template.code as any),
+				})),
+			}));
+
+		return {
+			decree: PGC_DECREE,
+			totalAccounts: DEFAULT_ACCOUNTS.length,
+			classes,
+		};
 	}
 
 	async getAccountById(id: string) {
