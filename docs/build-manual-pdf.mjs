@@ -1,7 +1,8 @@
 /**
- * Gera o PDF do Manual do Utilizador a partir de docs/manual-do-utilizador.html.
+ * Gera um PDF a partir de um HTML de documentacao.
  *
- *   node docs/build-manual-pdf.mjs
+ *   node docs/build-manual-pdf.mjs                       # manual do utilizador
+ *   node docs/build-manual-pdf.mjs <entrada.html> <saida.pdf>
  *
  * Usa o Chrome instalado, conduzido pelo DevTools Protocol em vez do
  * `--print-to-pdf` da linha de comandos: só o protocolo aceita um rodapé
@@ -16,8 +17,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const HTML = resolve('docs/manual-do-utilizador.html');
-const PDF = resolve('docs/Manual-do-Utilizador-Mpamba.pdf');
+const [inputArg, outputArg] = process.argv.slice(2);
+const HTML = resolve(inputArg ?? 'docs/manual-do-utilizador.html');
+const PDF = resolve(outputArg ?? 'docs/Manual-do-Utilizador-Mpamba.pdf');
 const PORT = 9333;
 
 const CHROME_CANDIDATES = [
@@ -30,10 +32,11 @@ const CHROME_CANDIDATES = [
 	'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
 ];
 
-const FOOTER = `
+/** O titulo vem do <title> do documento, para o rodape servir os dois PDFs. */
+const footerFor = (title) => `
 <div style="width:100%;margin:0 14mm;font-family:'Segoe UI',Arial,sans-serif;font-size:7pt;color:#8a8a99;
             display:flex;justify-content:space-between;border-top:0.5px solid #d8d8e0;padding-top:2mm;">
-  <span>Manual do Utilizador — Mpamba ERP</span>
+  <span>${title}</span>
   <span><span class="pageNumber"></span> / <span class="totalPages"></span></span>
 </div>`;
 
@@ -128,12 +131,18 @@ async function main() {
 		// Deixa assentar tipos de letra e a paginação antes de imprimir.
 		await sleep(1500);
 
+		const { result } = await client.send('Runtime.evaluate', {
+			expression: 'document.title',
+			returnByValue: true,
+		}, sessionId);
+		const title = result?.value || 'Mpamba ERP';
+
 		const { data } = await client.send('Page.printToPDF', {
 			printBackground: true,
 			preferCSSPageSize: true,
 			displayHeaderFooter: true,
 			headerTemplate: '<span></span>',
-			footerTemplate: FOOTER,
+			footerTemplate: footerFor(title),
 			generateTaggedPDF: true,
 			generateDocumentOutline: true,
 		}, sessionId);

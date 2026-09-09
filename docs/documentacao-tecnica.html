@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<title>Documentação Técnica — Mpamba</title>
+<style>
+	@page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+	:root {
+		--ink: #1a1a22;
+		--muted: #5b5b6b;
+		--faint: #8a8a99;
+		--rule: #d8d8e0;
+		--rule-soft: #ebebf1;
+		--primary: #1d4d5c;
+		--primary-soft: #eef4f6;
+		--accent: #483061;
+		--warn: #8a5a00;
+		--warn-bg: #fdf6e6;
+		--code-bg: #f5f5f9;
+	}
+
+	* { box-sizing: border-box; }
+	html { font-size: 10.5pt; }
+	body {
+		margin: 0;
+		font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+		color: var(--ink);
+		line-height: 1.55;
+		background: #fff;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		counter-reset: sec;
+	}
+
+	/* ─── Capa ───────────────────────────────────────────────────────────── */
+	.cover { height: 247mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }
+	.cover-top { padding-top: 28mm; }
+	.cover-mark {
+		display: inline-block; font-size: 8pt; font-weight: 700; letter-spacing: 0.18em;
+		text-transform: uppercase; color: var(--primary); border: 1px solid var(--primary);
+		border-radius: 2px; padding: 4px 10px;
+	}
+	.cover h1 { font-size: 34pt; line-height: 1.1; margin: 14mm 0 0; font-weight: 800; letter-spacing: -0.02em; }
+	.cover h1 small { display: block; font-size: 15pt; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-top: 5mm; }
+	.cover-rule { width: 40mm; height: 3px; background: var(--primary); margin: 10mm 0 0; }
+	.cover-lead { font-size: 11.5pt; color: var(--muted); max-width: 128mm; margin: 8mm 0 0; }
+	.cover-meta { border-top: 1px solid var(--rule); padding-top: 5mm; display: flex; gap: 12mm; font-size: 9pt; color: var(--faint); }
+	.cover-meta b { display: block; color: var(--ink); font-size: 9.5pt; font-weight: 600; }
+
+	/* ─── Estrutura ──────────────────────────────────────────────────────── */
+	h2, h3, h4 { page-break-after: avoid; }
+	h2 {
+		font-size: 17pt; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6mm;
+		padding-bottom: 3mm; border-bottom: 2px solid var(--primary);
+		counter-increment: sec; counter-reset: sub;
+	}
+	h2::before { content: counter(sec) ". "; color: var(--primary); }
+	h3 { font-size: 12.5pt; font-weight: 700; margin: 8mm 0 3mm; counter-increment: sub; }
+	h3::before { content: counter(sec) "." counter(sub) "  "; color: var(--primary); font-weight: 700; }
+	h4 { font-size: 10.5pt; font-weight: 700; margin: 5mm 0 2mm; color: var(--primary); }
+
+	section { counter-reset: sub; page-break-before: always; }
+	section.no-break { page-break-before: auto; }
+
+	p { margin: 0 0 3mm; }
+	ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+	li { margin-bottom: 1.5mm; }
+	li > ul, li > ol { margin-top: 1.5mm; }
+	strong { font-weight: 600; }
+
+	code {
+		font-family: "Cascadia Mono", Consolas, monospace;
+		font-size: 0.86em; background: var(--code-bg);
+		border: 1px solid var(--rule-soft); border-radius: 2px; padding: 0.5px 4px;
+	}
+	pre {
+		font-family: "Cascadia Mono", Consolas, monospace;
+		font-size: 8.5pt; line-height: 1.5;
+		background: var(--code-bg); border: 1px solid var(--rule-soft);
+		border-left: 3px solid var(--primary);
+		padding: 3mm 4mm; margin: 3mm 0 5mm;
+		white-space: pre-wrap; page-break-inside: avoid;
+	}
+	pre code { background: none; border: none; padding: 0; font-size: 1em; }
+	.pre-label {
+		display: block; font-size: 8pt; font-weight: 700; text-transform: uppercase;
+		letter-spacing: 0.1em; color: var(--faint); margin-bottom: 1.5mm;
+	}
+
+	/* ─── Índice ─────────────────────────────────────────────────────────── */
+	.toc { page-break-after: always; }
+	.toc h2 { border-bottom-color: var(--rule); counter-increment: none; }
+	.toc h2::before { content: none; }
+	.toc ol { list-style: none; padding: 0; counter-reset: toc; }
+	.toc > ol > li {
+		counter-increment: toc; border-bottom: 1px solid var(--rule-soft);
+		padding: 2.4mm 0; font-weight: 600; font-size: 11pt;
+	}
+	.toc > ol > li::before { content: counter(toc) "."; display: inline-block; width: 9mm; color: var(--primary); }
+	.toc ul { list-style: none; padding: 1.5mm 0 0 9mm; font-weight: 400; font-size: 9.5pt; color: var(--muted); }
+	.toc ul li { margin: 0; padding: 0.5mm 0; }
+	.toc ul li::before { content: "— "; color: var(--faint); }
+	.toc a { color: inherit; text-decoration: none; }
+
+	/* ─── Tabelas ────────────────────────────────────────────────────────── */
+	table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 9pt; }
+	caption {
+		caption-side: top; text-align: left; font-size: 8.5pt; font-weight: 700;
+		text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); padding-bottom: 2mm;
+	}
+	th {
+		text-align: left; background: var(--primary-soft); color: var(--primary);
+		font-weight: 700; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em;
+		padding: 2.2mm 2.5mm; border-bottom: 1px solid var(--rule);
+	}
+	td { padding: 2.2mm 2.5mm; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+	tr { page-break-inside: avoid; }
+	thead { display: table-header-group; }
+	.mono { font-family: "Cascadia Mono", Consolas, monospace; font-size: 8.5pt; }
+	.nowrap { white-space: nowrap; }
+
+	/* ─── Caixas ─────────────────────────────────────────────────────────── */
+	.note, .warn {
+		border-left: 3px solid var(--rule); background: #f8f8fb;
+		padding: 3mm 4mm; margin: 4mm 0; font-size: 9.5pt; page-break-inside: avoid;
+	}
+	.note { border-left-color: var(--accent); background: #f5f2f8; }
+	.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+	.note p:last-child, .warn p:last-child { margin-bottom: 0; }
+	.box-label { display: block; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.5mm; }
+	.note .box-label { color: var(--accent); }
+	.warn .box-label { color: var(--warn); }
+
+	.lead { font-size: 11pt; color: var(--muted); margin-bottom: 5mm; }
+	.pill {
+		display: inline-block; font-size: 8pt; font-weight: 700; letter-spacing: 0.03em;
+		padding: 1px 6px; border-radius: 2px; background: var(--primary-soft);
+		color: var(--primary); border: 1px solid #cfe0e5;
+	}
+	.end { margin-top: 10mm; padding-top: 4mm; border-top: 1px solid var(--rule); font-size: 9pt; color: var(--faint); text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ CAPA ══════════════════════ -->
+<div class="cover">
+	<div class="cover-top">
+		<span class="cover-mark">Mpamba ERP</span>
+		<h1>
+			Documentação Técnica
+			<small>Arquitectura, convenções e operação</small>
+		</h1>
+		<div class="cover-rule"></div>
+		<p class="cover-lead">
+			Como o sistema está construído: camadas, isolamento entre organizações,
+			autorização, integração entre módulos, base de dados, deployment e as
+			armadilhas que já custaram tempo a alguém.
+		</p>
+	</div>
+	<div class="cover-meta">
+		<div><b>Versão</b>Setembro de 2026</div>
+		<div><b>Destinatários</b>Equipa de desenvolvimento e operação</div>
+		<div><b>Stack</b>Node.js · Express · Prisma · PostgreSQL · Next.js</div>
+	</div>
+</div>
+
+<!-- ══════════════════════ ÍNDICE ══════════════════════ -->
+<div class="toc">
+	<h2>Índice</h2>
+	<ol>
+		<li><a href="#panoramica">Panorâmica</a>
+			<ul><li>Stack e componentes</li><li>Estrutura do repositório</li></ul>
+		</li>
+		<li><a href="#backend">Arquitectura do backend</a>
+			<ul><li>Camadas e responsabilidades</li><li>Composição das rotas</li><li>Serviços base</li></ul>
+		</li>
+		<li><a href="#multitenancy">Isolamento entre organizações</a>
+			<ul><li>O contexto de organização</li><li>Onde o isolamento se aplica</li></ul>
+		</li>
+		<li><a href="#autenticacao">Autenticação</a>
+			<ul><li>Tokens e validade</li><li>Renovação no cliente</li></ul>
+		</li>
+		<li><a href="#autorizacao">Autorização</a>
+			<ul><li>As quatro barreiras</li><li>RBAC e perfis</li><li>Códigos de erro</li></ul>
+		</li>
+		<li><a href="#dados">Modelo de dados</a>
+			<ul><li>Domínios e entidades</li><li>Enumerações</li></ul>
+		</li>
+		<li><a href="#integracao">Integração entre módulos</a>
+			<ul><li>Event bus</li><li>Reacções e idempotência</li><li>Cold start em serverless</li></ul>
+		</li>
+		<li><a href="#contabilidade">Módulo de Contabilidade</a>
+			<ul><li>Plano de contas e sincronização</li><li>Lançamentos automáticos</li><li>Ordenação de códigos</li></ul>
+		</li>
+		<li><a href="#api">Convenções da API</a>
+			<ul><li>Formato das respostas</li><li>Paginação e erros</li><li>Documentação Swagger</li></ul>
+		</li>
+		<li><a href="#frontend">Arquitectura do frontend</a>
+			<ul><li>Grupos de rotas e layouts</li><li>Camadas service, hook e DTO</li><li>Estado e cache</li></ul>
+		</li>
+		<li><a href="#validacao">Validação</a></li>
+		<li><a href="#basededados">Base de dados e migrações</a>
+			<ul><li>Prisma e adaptador</li><li>Migrações de dados</li><li>Seeds</li></ul>
+		</li>
+		<li><a href="#deployment">Deployment e ambiente</a>
+			<ul><li>Projectos e variáveis</li><li>Tarefas agendadas</li><li>Ordem de deploy</li></ul>
+		</li>
+		<li><a href="#testes">Testes</a></li>
+		<li><a href="#armadilhas">Armadilhas conhecidas</a></li>
+		<li><a href="#runbooks">Runbooks</a></li>
+	</ol>
+</div>
+
+<!-- ══════════════════════ 1 ══════════════════════ -->
+<section id="panoramica" class="no-break">
+	<h2>Panorâmica</h2>
+
+	<p class="lead">
+		O Mpamba é um ERP modular multi-organização. Duas aplicações independentes,
+		uma base de dados PostgreSQL, e quatro módulos de negócio que comunicam por
+		eventos internos.
+	</p>
+
+	<h3>Stack e componentes</h3>
+	<table>
+		<thead><tr><th style="width:26%">Componente</th><th style="width:30%">Tecnologia</th><th>Papel</th></tr></thead>
+		<tbody>
+			<tr><td><code>mpamba-backend</code></td><td>Node.js · Express 5 · TypeScript</td><td>API REST, regras de negócio, autorização.</td></tr>
+			<tr><td><code>mpamba-frontend</code></td><td>Next.js 16 · React 19 · TypeScript</td><td>Aplicação web (App Router).</td></tr>
+			<tr><td>Persistência</td><td>PostgreSQL · Prisma 7</td><td>45 modelos, 26 migrações versionadas.</td></tr>
+			<tr><td>Cache</td><td>Redis</td><td>Cache de respostas, via <code>cache.middleware.ts</code>.</td></tr>
+			<tr><td>Validação</td><td>Zod 4</td><td>DTOs partilhados em forma nos dois lados.</td></tr>
+			<tr><td>Estado no cliente</td><td>TanStack Query 5 · Zustand</td><td>Cache de servidor e sessão.</td></tr>
+			<tr><td>Testes</td><td>Vitest 4</td><td>28 ficheiros, 257 testes.</td></tr>
+			<tr><td>Alojamento</td><td>Vercel (serverless)</td><td>Projectos separados para API e web.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Estrutura do repositório</h3>
+	<pre><code>Mpamba-main/
+├─ mpamba-backend/
+│  ├─ api/index.ts            ponto de entrada serverless
+│  ├─ src/
+│  │  ├─ app.ts               montagem do Express e das rotas
+│  │  ├─ server.ts            arranque local (abre porta, agenda timers)
+│  │  ├─ config/              prisma, redis, swagger, email
+│  │  ├─ middleware/           auth, subscrição/módulo, cache
+│  │  ├─ routes/              39 ficheiros de rota (core + module)
+│  │  ├─ controller/          adaptação HTTP ↔ serviço
+│  │  ├─ services/            50 serviços: regras de negócio
+│  │  └─ shared/              dto, utils, rbac, tipos
+│  ├─ prisma/                 schema, 26 migrações, seeds
+│  └─ test/                   28 ficheiros de teste
+├─ mpamba-frontend/
+│  ├─ public/                 estáticos (inclui o decreto do PGC)
+│  └─ src/
+│     ├─ app/(auth)           login, registo, activação, senha
+│     ├─ app/(modules)        admin, billing, stock, treasury, contabilidade
+│     ├─ app/core             utilizadores, papéis, subscrição, perfil
+│     ├─ components/          ui, layout, comuns
+│     ├─ hooks/               um hook por recurso, sobre TanStack Query
+│     ├─ services/            chamadas HTTP por recurso
+│     ├─ shared/              dto (zod), tipos, constantes, utils
+│     └─ store/               sessão (Zustand)
+└─ docs/                      manual do utilizador, este documento, PGC</code></pre>
+
+	<div class="note">
+		<span class="box-label">Simetria propositada</span>
+		<p>
+			<code>services/</code>, <code>hooks/</code>, <code>shared/dto/</code> e
+			<code>shared/types/</code> no frontend espelham os recursos do backend. Ao
+			acrescentar um recurso, mexe-se nos mesmos quatro sítios de cada lado.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════ 2 ══════════════════════ -->
+<section id="backend">
+	<h2>Arquitectura do backend</h2>
+
+	<h3>Camadas e responsabilidades</h3>
+	<p>O percurso de um pedido é sempre o mesmo, e cada camada tem uma única responsabilidade:</p>
+
+	<pre><code>HTTP
+ └─ routes/       declara o caminho e encadeia os guards
+     └─ controller/  lê o pedido, valida com o DTO, formata a resposta
+         └─ services/   regras de negócio; é aqui que vive a decisão
+             └─ prisma      acesso a dados</code></pre>
+
+	<table>
+		<thead><tr><th style="width:22%">Camada</th><th>Faz</th><th style="width:30%">Não faz</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Rota</strong></td><td>Caminho, método, guards de autenticação, subscrição, módulo e permissão.</td><td>Lógica de negócio.</td></tr>
+			<tr><td><strong>Controlador</strong></td><td><code>schema.parse(req.body)</code>, chama o serviço, devolve <code>{ data }</code> e mapeia o erro para o código HTTP.</td><td>Consultar a base de dados directamente.</td></tr>
+			<tr><td><strong>Serviço</strong></td><td>Regras, validações de domínio, transacções, emissão de eventos.</td><td>Conhecer <code>req</code> ou <code>res</code>.</td></tr>
+		</tbody>
+	</table>
+
+	<p>
+		Os serviços não recebem o <code>organizationId</code> por parâmetro: leem-no do
+		contexto (capítulo 3). É o que permite chamá-los de um controlador, de um
+		handler de evento ou de um teste sem mudar a assinatura.
+	</p>
+
+	<h3>Composição das rotas</h3>
+	<p>
+		Cada módulo tem um <code>index.ts</code> que aplica os guards comuns uma única
+		vez e monta os sub-routers. É aqui que se garante que nenhuma rota do módulo
+		escapa às verificações:
+	</p>
+	<pre><span class="pre-label">src/routes/module/accounting/index.ts</span><code>router.use(authMiddleware);
+router.use(subscriptionGuard);
+router.use(moduleGuard('contabilidade'));
+
+router.use('/accounts', accountRoutes);
+router.use('/entries', journalRoutes);
+router.use('/reports', reportRoutes);</code></pre>
+
+	<p>
+		Dentro de cada sub-router, a permissão concreta é declarada rota a rota com
+		<code>permissionGuard(PERMISSIONS.X)</code>.
+	</p>
+
+	<div class="warn">
+		<span class="box-label">Ordem das rotas</span>
+		<p>
+			Rotas literais têm de ser declaradas <strong>antes</strong> das
+			paramétricas. <code>GET /accounts/pgc</code> está acima de
+			<code>GET /accounts/:id</code>; invertido, o Express leria «pgc» como um
+			id de conta. Vale para qualquer caminho fixo que partilhe o prefixo com um
+			parâmetro.
+		</p>
+	</div>
+
+	<h3>Serviços base</h3>
+	<p>
+		Cada módulo tem um <code>base.service.ts</code> com os <em>getters</em> de
+		contexto, de que os serviços do módulo herdam:
+	</p>
+	<pre><span class="pre-label">padrão de src/services/module/*/base.service.ts</span><code>export abstract class BaseAccountingService {
+  protected get orgId(): string {
+    const id = organizationContext.getOrganizationId();
+    if (!id) throw new Error('Contexto de organização obrigatório para contabilidade');
+    return id;
+  }
+  protected get userId(): string { /* idem */ }
+}</code></pre>
+	<p>
+		O <em>getter</em> lança se o contexto estiver vazio. Isso transforma um
+		esquecimento de configuração num erro imediato e explícito, em vez de uma
+		consulta silenciosa a todas as organizações.
+	</p>
+</section>
+
+<!-- ══════════════════════ 3 ══════════════════════ -->
+<section id="multitenancy">
+	<h2>Isolamento entre organizações</h2>
+
+	<p class="lead">
+		Todos os dados de negócio pertencem a uma organização. O isolamento é a
+		propriedade mais importante do sistema: uma falha aqui expõe dados de um
+		cliente a outro.
+	</p>
+
+	<h3>O contexto de organização</h3>
+	<p>
+		<code>shared/utils/organization.context.ts</code> envolve um
+		<code>AsyncLocalStorage</code> do Node. O <code>authMiddleware</code> lê o JWT
+		e corre o resto do pedido dentro desse contexto:
+	</p>
+	<pre><span class="pre-label">src/middleware/auth.middleware.ts</span><code>const payload = JwtStrategy.verify(token);
+req.user = payload;
+
+organizationContext.run(
+  { organizationId: payload.organizationId || '', userId: payload.sub, roles: payload.roles || [] },
+  () => next()
+);</code></pre>
+	<p>
+		Como o <code>AsyncLocalStorage</code> acompanha a cadeia de chamadas
+		assíncronas, qualquer serviço invocado dentro do pedido — por mais fundo que
+		esteja — lê o mesmo contexto sem o receber por parâmetro. Pedidos concorrentes
+		não se contaminam: cada um tem o seu <em>store</em>.
+	</p>
+
+	<h3>Onde o isolamento se aplica</h3>
+	<ul>
+		<li><strong>Leituras</strong> — todo o <code>findMany</code>/<code>findFirst</code> de dados de negócio filtra por <code>organizationId</code>.</li>
+		<li><strong>Escritas</strong> — o <code>organizationId</code> vem do contexto, nunca do corpo do pedido.</li>
+		<li><strong>Acesso por id</strong> — usa-se <code>findFirst({ where: { id, organizationId } })</code> e não <code>findUnique({ where: { id } })</code>: com o id sozinho, quem adivinhasse um UUID de outra organização acedia-lhe.</li>
+		<li><strong>Referências cruzadas</strong> — ao aceitar um id no corpo (categoria, conta, cliente), confirma-se que pertence à organização antes de o usar.</li>
+	</ul>
+
+	<div class="warn">
+		<span class="box-label">Regra ao escrever código novo</span>
+		<p>
+			<code>findUnique({ where: { id } })</code> em dados de negócio é quase
+			sempre um erro. A excepção são as entidades globais da plataforma
+			(<code>Plan</code>, <code>Module</code>, <code>Permission</code>), que não
+			pertencem a nenhuma organização.
+		</p>
+	</div>
+
+	<p>
+		O Super Admin da plataforma é o único caso sem <code>organizationId</code>. Os
+		guards de subscrição e de módulo deixam-no passar por essa ausência, e as
+		rotas de administração operam explicitamente sobre a organização indicada.
+	</p>
+</section>
+
+<!-- ══════════════════════ 4 ══════════════════════ -->
+<section id="autenticacao">
+	<h2>Autenticação</h2>
+
+	<h3>Tokens e validade</h3>
+	<table>
+		<thead><tr><th style="width:26%">Token</th><th style="width:20%">Validade</th><th>Notas</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Access token</strong></td><td class="mono">15m</td><td>Enviado em <code>Authorization: Bearer</code>. Transporta <code>sub</code>, <code>organizationId</code> e <code>roles</code>.</td></tr>
+			<tr><td><strong>Refresh token</strong></td><td class="mono">30m</td><td>Segredo próprio (<code>JWT_REFRESH_SECRET</code>). Serve só para obter um access token novo.</td></tr>
+			<tr><td><strong>Token de senha</strong></td><td class="mono">1h</td><td><code>PasswordResetToken</code>, persistido e de uso único.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		Os prazos vêm de <code>JWT_EXPIRES_IN</code> e
+		<code>JWT_REFRESH_EXPIRES_IN</code>. As senhas são guardadas com
+		<code>bcrypt</code>.
+	</p>
+
+	<div class="note">
+		<span class="box-label">O JWT não é a fonte de verdade das permissões</span>
+		<p>
+			O token traz os papéis, mas o <code>permissionGuard</code> consulta a base
+			de dados a cada pedido (<code>rbacService.hasPermission</code>). Uma
+			permissão retirada tem efeito imediato, sem esperar a expiração do token —
+			ao custo de uma consulta por pedido protegido.
+		</p>
+	</div>
+
+	<h3>Renovação no cliente</h3>
+	<p>
+		O <code>apiClient</code> (axios) injecta o token em cada pedido e, ao receber
+		<code>401</code>, renova e repete o pedido original uma vez. As renovações
+		concorrentes são <strong>coalescidas</strong> numa só promessa:
+	</p>
+	<pre><span class="pre-label">src/shared/utils/api.utils.ts</span><code>let refreshPromise: Promise&lt;string&gt; | null = null;
+
+async function refreshAccessToken(): Promise&lt;string&gt; {
+  if (!refreshPromise) {
+    refreshPromise = (async () =&gt; { /* ... */ })()
+      .finally(() =&gt; { refreshPromise = null; });
+  }
+  return refreshPromise;
+}</code></pre>
+	<p>
+		Sem isto, um ecrã com seis consultas em paralelo dispararia seis renovações ao
+		expirar o token. Falhando a renovação, a sessão é encerrada e o utilizador
+		volta a <code>/signin</code>.
+	</p>
+
+	<h3>Perfil e sincronização de sessão</h3>
+	<p>
+		<code>GET /auth/me</code> devolve o perfil <strong>construído da base de
+		dados</strong> — papéis, permissões e módulos activos — e não o conteúdo do
+		token, que não os traz actualizados. O <code>SessionSync</code> no layout raiz
+		refresca o perfil ao abrir a aplicação e quando a janela ganha foco, para que
+		uma alteração de acessos ou a activação de um módulo apareçam sem novo login.
+	</p>
+</section>
+
+<!-- ══════════════════════ 5 ══════════════════════ -->
+<section id="autorizacao">
+	<h2>Autorização</h2>
+
+	<p class="lead">
+		Quatro barreiras independentes, sempre nesta ordem. Cada uma responde a uma
+		pergunta diferente e devolve um código próprio.
+	</p>
+
+	<table>
+		<caption>As quatro barreiras</caption>
+		<thead>
+			<tr><th style="width:24%">Guard</th><th style="width:30%">Pergunta</th><th style="width:14%">HTTP</th><th>Código</th></tr>
+		</thead>
+		<tbody>
+			<tr><td><code>authMiddleware</code></td><td>Quem é?</td><td>401</td><td>—</td></tr>
+			<tr><td><code>subscriptionGuard</code></td><td>A subscrição permite escrever?</td><td>402</td><td><code>SUBSCRIPTION_REQUIRED</code></td></tr>
+			<tr><td><code>moduleGuard</code></td><td>O módulo está contratado?</td><td>403</td><td><code>MODULE_LOCKED</code></td></tr>
+			<tr><td><code>permissionGuard</code></td><td>O papel autoriza esta acção?</td><td>403</td><td><code>FORBIDDEN_PERMISSION</code></td></tr>
+		</tbody>
+	</table>
+
+	<div class="note">
+		<span class="box-label">Leitura continua, escrita bloqueia</span>
+		<p>
+			O <code>subscriptionGuard</code> só bloqueia <code>POST</code>,
+			<code>PUT</code>, <code>PATCH</code> e <code>DELETE</code>. Com a subscrição
+			inactiva, a organização continua a <strong>consultar</strong> os seus dados
+			— o que evita transformar um atraso de pagamento em perda de acesso ao
+			histórico.
+		</p>
+	</div>
+
+	<h3>RBAC e perfis</h3>
+	<p>
+		O modelo é <code>User → UserRole → Role → RolePermission → Permission</code>.
+		Um utilizador pode ter vários papéis e acumula as permissões de todos. As
+		permissões são <em>strings</em> com a forma <code>recurso:acção</code> ou
+		<code>domínio:recurso:acção</code> — por exemplo <code>invoice:create</code>,
+		<code>accounting:entry:create</code>.
+	</p>
+	<p>
+		<code>ROLE_TEMPLATES</code> define os perfis criados em cada organização nova
+		(<code>AuthService.register</code> chama
+		<code>RoleTemplateService.createRoleTemplatesForOrganization</code>). O
+		<code>upsert</code> sincroniza as permissões do papel, pelo que alterar um
+		template afecta organizações novas — mas <strong>não</strong> as existentes,
+		porque a função só corre no registo.
+	</p>
+
+	<div class="warn">
+		<span class="box-label">Ao alterar os templates</span>
+		<p>
+			Acrescentar uma permissão a um <code>ROLE_TEMPLATE</code> não a concede a
+			quem já existe. Para isso é preciso uma migração de dados — como a
+			<code>grant_customer_permissions_to_billing_roles</code>, que concedeu
+			<code>customer:*</code> a todo o papel que já tivesse a permissão de
+			facturação equivalente.
+		</p>
+	</div>
+
+	<h3>Super Admin</h3>
+	<p>
+		O <code>permissionGuard</code> deixa passar sem verificação quem tenha o papel
+		<code>SUPER_ADMIN</code> ou <code>Super Administrador</code>. É a única
+		excepção ao RBAC, e existe para a área de administração da plataforma.
+	</p>
+</section>
+
+<!-- ══════════════════════ 6 ══════════════════════ -->
+<section id="dados">
+	<h2>Modelo de dados</h2>
+
+	<p class="lead">
+		45 modelos Prisma. Quase todos têm <code>organizationId</code>; as excepções
+		são as entidades globais da plataforma.
+	</p>
+
+	<h3>Domínios e entidades</h3>
+	<table>
+		<thead><tr><th style="width:22%">Domínio</th><th>Modelos</th></tr></thead>
+		<tbody>
+			<tr>
+				<td><strong>Plataforma</strong><br><span style="color:var(--faint);font-size:8.5pt">globais</span></td>
+				<td class="mono">Plan · PlanModule · Module · Permission</td>
+			</tr>
+			<tr>
+				<td><strong>Organização<br>e acesso</strong></td>
+				<td class="mono">Organization · OrganizationModule · Subscription · SubscriptionRequest · ActivationCode · User · UserModule · UserRole · Role · RolePermission · PasswordResetToken</td>
+			</tr>
+			<tr>
+				<td><strong>Facturação</strong></td>
+				<td class="mono">Customer · Service · TaxRule · InvoiceSeries · Invoice · InvoiceItem · Proforma · ProformaItem · CreditNote · CreditNoteItem · Receipt</td>
+			</tr>
+			<tr>
+				<td><strong>Stock</strong></td>
+				<td class="mono">Product · ProductCategory · Supplier · StockMovement</td>
+			</tr>
+			<tr>
+				<td><strong>Tesouraria</strong></td>
+				<td class="mono">FinancialAccount · FinancialCategory · FinancialMovement · CashSession · BankStatement · BankStatementLine · CostCenter · ExchangeRate · Payable · Receivable</td>
+			</tr>
+			<tr>
+				<td><strong>Contabilidade</strong></td>
+				<td class="mono">AccountingAccount · JournalEntry · JournalEntryLine</td>
+			</tr>
+			<tr>
+				<td><strong>Notificações</strong></td>
+				<td class="mono">Notification · NotificationRecipient</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h3>Enumerações</h3>
+	<table>
+		<thead><tr><th style="width:30%">Enum</th><th>Valores</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">SubscriptionStatus</td><td class="mono">TRIAL · ACTIVE · PAST_DUE · SUSPENDED · EXPIRED · CANCELLED</td></tr>
+			<tr><td class="mono">InvoiceStatus</td><td class="mono">DRAFT · ISSUED · CANCELLED</td></tr>
+			<tr><td class="mono">PaymentStatus</td><td class="mono">PENDENTE · PARCIAL · PAGO · VENCIDO</td></tr>
+			<tr><td class="mono">MovementType</td><td class="mono">ENTRADA · SAIDA · AJUSTE</td></tr>
+			<tr><td class="mono">AccountType</td><td class="mono">CAIXA · BANCO</td></tr>
+			<tr><td class="mono">FinancialMovementType</td><td class="mono">ENTRADA · SAIDA · TRANSFERENCIA</td></tr>
+			<tr><td class="mono">AccountSide</td><td class="mono">ATIVO · PASSIVO · CAPITAL_PROPRIO · CUSTO · PROVEITO</td></tr>
+			<tr><td class="mono">JournalEntrySource</td><td class="mono">MANUAL · AUTOMATIC</td></tr>
+			<tr><td class="mono">TaxRuleKind</td><td class="mono">TAX · RETENTION · EXEMPTION</td></tr>
+			<tr><td class="mono">TaxRuleScope</td><td class="mono">GLOBAL · CUSTOMER · CUSTOMER_CATEGORY · SERVICE · SERVICE_CATEGORY</td></tr>
+			<tr><td class="mono">NotificationType</td><td class="mono">INFO · SUCCESS · WARNING · SYSTEM</td></tr>
+			<tr><td class="mono">CashSessionStatus</td><td class="mono">OPEN · CLOSED</td></tr>
+			<tr><td class="mono">StatementStatus</td><td class="mono">PENDING · PARTIAL · COMPLETED</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Padrões recorrentes</h3>
+	<ul>
+		<li><strong>Unicidade por organização</strong> — <code>@@unique([sku, organizationId])</code>, <code>@@unique([code, organizationId])</code>. O mesmo código pode existir em empresas diferentes.</li>
+		<li><strong>Desactivar em vez de apagar</strong> — <code>isActive</code> em quase todas as entidades. Registos com histórico associado nunca são eliminados.</li>
+		<li><strong>Rasto de auditoria</strong> — <code>userId</code> em movimentos e lançamentos; <code>createdAt</code>/<code>updatedAt</code> em toda a parte.</li>
+		<li><strong>Reversão em vez de correcção</strong> — <code>reversedById</code> em <code>JournalEntry</code>: o original mantém-se e a reversão fica-lhe ligada.</li>
+		<li><strong>Marcas de alerta</strong> — <code>overdueAlertedAt</code>, <code>criticalBalanceAlertedAt</code>, <code>expiryAlertedAt</code> evitam que a verificação diária repita o mesmo aviso.</li>
+	</ul>
+</section>
+
+<!-- ══════════════════════ 7 ══════════════════════ -->
+<section id="integracao">
+	<h2>Integração entre módulos</h2>
+
+	<p class="lead">
+		Os módulos não se chamam directamente. Emitem eventos, e o
+		<code>IntegrationService</code> é o único sítio que sabe ligar uns aos outros.
+	</p>
+
+	<h3>Event bus</h3>
+	<p>
+		<code>shared/utils/event-bus.ts</code> é um <em>singleton</em> sobre o
+		<code>EventEmitter</code> do Node, com o limite de ouvintes elevado a 20 para
+		vários módulos poderem reagir ao mesmo evento. Os nomes estão em
+		<code>EVENTS</code>, para não se escreverem à mão.
+	</p>
+	<pre><span class="pre-label">emissão, em invoice.service.ts</span><code>eventBus.emitEvent(EVENTS.BILLING.INVOICE_ISSUED, issuedInvoice);</code></pre>
+
+	<h3>Reacções</h3>
+	<p>
+		<code>IntegrationService.init()</code> subscreve os handlers. Cada handler
+		verifica se o módulo de destino está activo <strong>antes</strong> de agir, e
+		envolve cada reacção no seu próprio <code>try/catch</code>:
+	</p>
+	<pre><span class="pre-label">src/services/module/integration.service.ts</span><code>const isStockActive = await SubscriptionService.isModuleEnabled(orgId, 'stock');
+if (isStockActive) await IntegrationService.handleStockReduction(invoice);</code></pre>
+	<p>
+		O isolamento dos <code>try/catch</code> é deliberado: uma falha na baixa de
+		stock não pode impedir o lançamento contabilístico da mesma factura, nem
+		vice-versa, e nenhuma delas pode fazer falhar a emissão.
+	</p>
+
+	<table>
+		<caption>Eventos e reacções</caption>
+		<thead><tr><th style="width:26%">Evento</th><th style="width:24%">Stock</th><th style="width:24%">Tesouraria</th><th>Contabilidade</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">invoice.issued</td><td>Baixa dos produtos</td><td>—</td><td>Clientes / Vendas / IVA</td></tr>
+			<tr><td class="mono">invoice.cancelled</td><td>Reposição do stock</td><td>Estorno da entrada</td><td>Reversão do lançamento</td></tr>
+			<tr><td class="mono">receipt.issued</td><td>—</td><td>Entrada</td><td>Caixa ou banco / Clientes</td></tr>
+			<tr><td class="mono">credit-note.issued</td><td>—</td><td>Saída</td><td>Reversão do rédito e do IVA</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Idempotência</h3>
+	<p>
+		Em serverless o mesmo evento pode ser processado mais de uma vez. Cada
+		reacção verifica antes de escrever:
+	</p>
+	<ul>
+		<li><strong>Stock</strong> — procura um <code>StockMovement</code> com a referência <code>INV:&lt;número&gt;</code> antes de dar baixa.</li>
+		<li><strong>Contabilidade</strong> — procura um <code>JournalEntry</code> com o mesmo <code>sourceReference</code> (<code>INV:</code>, <code>REC:</code>, <code>NC:</code>, <code>REVERSAL:</code>).</li>
+		<li><strong>Tesouraria</strong> — usa a referência do movimento pela mesma via.</li>
+	</ul>
+
+	<div class="warn">
+		<span class="box-label">Cold start em serverless</span>
+		<p>
+			<code>api/index.ts</code> chama <code>IntegrationService.init()</code> a
+			cada arranque a frio. Sem a guarda <code>private static initialized</code>,
+			uma instância reaproveitada acumularia subscrições e o mesmo evento seria
+			processado várias vezes — a mesma factura baixaria stock duas vezes. Ao
+			acrescentar subscrições, mantenha-as dentro dessa guarda.
+		</p>
+	</div>
+
+	<div class="note">
+		<span class="box-label">Limite conhecido</span>
+		<p>
+			O bus é em memória e por instância. Um handler que falhe não é repetido
+			automaticamente, e um documento emitido enquanto o módulo de destino estava
+			inactivo <strong>não</strong> é reprocessado ao activá-lo. Para
+			garantias de entrega seria preciso uma fila persistente.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════ 8 ══════════════════════ -->
+<section id="contabilidade">
+	<h2>Módulo de Contabilidade</h2>
+
+	<p class="lead">
+		O plano de contas segue o PGC-Angola (Decreto n.º 82/01). O ficheiro
+		<code>default-accounts.constants.ts</code> é a fonte única: dele saem a
+		semeadura, a consulta na aplicação e as contas-âncora dos lançamentos
+		automáticos.
+	</p>
+
+	<h3>Plano de contas e sincronização</h3>
+	<p>
+		<code>DEFAULT_ACCOUNTS</code> tem ~254 contas com apenas
+		<code>code</code>, <code>name</code> e <code>side</code>. A classe e o código-mãe
+		são <strong>derivados do código</strong>, para não poderem contradizê-lo:
+	</p>
+	<pre><code>accountClassOf('34.5.3')  // 3   — primeiro dígito
+parentCodeOf('34.5.3')    // '34.5'
+parentCodeOf('34')        // undefined — não há contas de 1 dígito no PGC</code></pre>
+
+	<p>
+		<code>ensureDefaultAccounts(orgId)</code> sincroniza conta a conta, e não «só
+		se a organização não tiver nenhuma»: cria as que faltam com
+		<code>createMany</code> e repara <code>class</code>, <code>side</code> e
+		<code>parentId</code> agrupando as escrituras em poucos <code>updateMany</code>.
+		Não toca em <code>name</code> nem em <code>isActive</code>, que são decisões da
+		organização.
+	</p>
+	<p>
+		É chamado uma vez por operação — <code>listAccounts</code> no início, e
+		<code>ensurePlan</code> no serviço de lançamentos automáticos, antes de
+		resolver as âncoras em paralelo. Chamá-lo de dentro de <code>getAccountId</code>
+		punha várias sincronizações a correr ao mesmo tempo.
+	</p>
+
+	<h3>Lançamentos automáticos</h3>
+	<p>
+		<code>ANCHOR_ACCOUNT_CODES</code> fixa as contas que o sistema movimenta:
+	</p>
+	<table>
+		<thead><tr><th style="width:34%">Âncora</th><th style="width:16%">Código</th><th>Conta</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">CAIXA</td><td class="mono">45.1</td><td>Fundo fixo</td></tr>
+			<tr><td class="mono">BANCOS</td><td class="mono">43.1</td><td>Depósitos à ordem — moeda nacional</td></tr>
+			<tr><td class="mono">CLIENTES</td><td class="mono">31.1</td><td>Clientes — correntes</td></tr>
+			<tr><td class="mono">IVA_LIQUIDADO</td><td class="mono">34.5.3</td><td>IVA liquidado</td></tr>
+			<tr><td class="mono">VENDAS</td><td class="mono">61.3</td><td>Vendas — mercadorias</td></tr>
+			<tr><td class="mono">PRESTACOES_SERVICOS</td><td class="mono">62.1</td><td>Serviços principais</td></tr>
+		</tbody>
+	</table>
+	<p>
+		<code>deleteAccount</code> recusa eliminar qualquer uma delas. O rédito da
+		factura é repartido pelas linhas com <code>serviceId</code> (crédito em 62.1) e
+		pelas restantes (crédito em 61.3), porque o PGC separa vendas de prestações de
+		serviços.
+	</p>
+
+	<h3>Ordenação de códigos</h3>
+	<div class="warn">
+		<span class="box-label">Nunca ordenar códigos de conta como texto</span>
+		<p>
+			<code>ORDER BY code</code> coloca <code>75.2.11</code> antes de
+			<code>75.2.9</code> e <code>68.10</code> antes de <code>68.9</code>. Use
+			<code>compareAccountCodes</code>, que compara segmento a segmento como
+			número. Existe no backend
+			(<code>default-accounts.constants.ts</code>) e espelhado no frontend
+			(<code>shared/utils/accounting.utils.ts</code>).
+		</p>
+	</div>
+
+	<h3>Validações dos lançamentos manuais</h3>
+	<p>
+		<code>createManualEntry</code> recusa: menos de duas linhas; débito e crédito
+		na mesma linha; linha sem valor; lançamento não balanceado; contas de outra
+		organização; contas desactivadas; contas que agregam sub-contas; data futura.
+		A verificação das contas faz duas consultas — uma para as contas em si, outra
+		para saber quais têm filhos (<code>distinct: ['parentId']</code>).
+	</p>
+</section>
+
+<!-- ══════════════════════ 9 ══════════════════════ -->
+<section id="api">
+	<h2>Convenções da API</h2>
+
+	<p>Base: <code>/api</code>. Grupos montados em <code>src/app.ts</code>:</p>
+	<table>
+		<thead><tr><th style="width:32%">Prefixo</th><th>Conteúdo</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">/auth</td><td>Login, registo, activação, refresh, perfil, senha.</td></tr>
+			<tr><td class="mono">/users · /roles · /permissions</td><td>RBAC.</td></tr>
+			<tr><td class="mono">/plans · /modules</td><td>Catálogo da plataforma.</td></tr>
+			<tr><td class="mono">/organizations</td><td>Organizações e a própria (<code>/me</code>).</td></tr>
+			<tr><td class="mono">/subscription · /subscription-requests</td><td>Subscrição e pedidos.</td></tr>
+			<tr><td class="mono">/billing · /stock · /treasury · /accounting</td><td>Módulos de negócio.</td></tr>
+			<tr><td class="mono">/dashboard · /notifications</td><td>Indicadores e notificações.</td></tr>
+			<tr><td class="mono">/cron</td><td>Tarefas agendadas, autenticadas por <code>CRON_SECRET</code>.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Formato das respostas</h3>
+	<pre><span class="pre-label">recurso único e coleção</span><code>{ "data": { ... } }
+{ "data": [ ... ] }</code></pre>
+	<pre><span class="pre-label">coleção paginada</span><code>{
+  "data": [ ... ],
+  "pagination": { "page": 1, "pageSize": 20, "total": 57, "totalPages": 3,
+                  "hasNextPage": true, "hasPreviousPage": false }
+}</code></pre>
+	<pre><span class="pre-label">erro</span><code>{ "message": "...", "code": "MODULE_LOCKED" }        // code só quando há
+{ "message": "Dados inválidos", "errors": [ ... ] }  // falha de validação zod</code></pre>
+
+	<p>
+		Parâmetros de listagem: <code>page</code>, <code>pageSize</code> (20 por
+		defeito), <code>search</code> e filtros próprios do recurso. Datas em ISO.
+	</p>
+
+	<h3>Códigos de estado</h3>
+	<table>
+		<thead><tr><th style="width:14%">Código</th><th>Quando</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">400</td><td>Validação falhou, ou regra de negócio recusou a operação.</td></tr>
+			<tr><td class="mono">401</td><td>Sem token, token inválido ou expirado.</td></tr>
+			<tr><td class="mono">402</td><td>Subscrição não permite escrever.</td></tr>
+			<tr><td class="mono">403</td><td>Módulo não contratado, ou permissão em falta.</td></tr>
+			<tr><td class="mono">404</td><td>Recurso não encontrado na organização em contexto.</td></tr>
+			<tr><td class="mono">500</td><td>Erro não previsto.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Documentação Swagger</h3>
+	<p>
+		Anotações <code>@swagger</code> nas rotas alimentam a especificação servida em
+		<code>/api-docs</code> (<code>/docs</code> redirecciona). A cobertura das
+		anotações é desigual — as rotas mais recentes têm-nas, outras não.
+	</p>
+</section>
+
+<!-- ══════════════════════ 10 ══════════════════════ -->
+<section id="frontend">
+	<h2>Arquitectura do frontend</h2>
+
+	<div class="warn">
+		<span class="box-label">Ler antes de escrever código</span>
+		<p>
+			O projecto usa <strong>Next.js 16</strong> e <strong>React 19</strong>.
+			Há APIs e convenções que mudaram face a versões anteriores. O
+			<code>AGENTS.md</code> do frontend obriga a consultar
+			<code>node_modules/next/dist/docs/</code> antes de escrever código novo, em
+			vez de assumir o que se sabia do App Router.
+		</p>
+	</div>
+
+	<h3>Grupos de rotas e layouts</h3>
+	<ul>
+		<li><code>app/(auth)/</code> — login, registo, activação, recuperação de senha. Sem sessão.</li>
+		<li><code>app/(modules)/</code> — um directório por módulo (<code>admin</code>, <code>billing</code>, <code>stock</code>, <code>treasury</code>, <code>contabilidade</code>), cada um com o seu <code>layout.tsx</code>.</li>
+		<li><code>app/core/</code> — ecrãs comuns: utilizadores, papéis, subscrição, configurações, perfil.</li>
+	</ul>
+	<p>
+		Cada módulo declara a navegação num <code>*.config.ts</code> tipado como
+		<code>LayoutConfig</code>: logótipo, <code>routeLabels</code> (usados no
+		<em>breadcrumb</em>) e <code>groups</code> com os itens. Cada item traz a
+		<code>permission</code> que o torna visível, ou <code>null</code> para
+		visível sempre.
+	</p>
+	<pre><span class="pre-label">app/(modules)/contabilidade/_components/accounting.config.ts</span><code>{ name: 'Plano de Contas', href: '/contabilidade/accounts',
+  icon: ListTree, permission: PERMISSIONS.ACCOUNTING_ACCOUNT_VIEW }</code></pre>
+	<p>
+		Acrescentar um ecrã ao menu é acrescentar uma linha aqui. A permissão tem de
+		ser a <strong>mesma</strong> que o guard da rota exige no backend — a
+		divergência entre as duas é o defeito mais fácil de introduzir e o mais
+		confuso de diagnosticar (o item aparece e a acção falha com 403).
+	</p>
+
+	<h3>Camadas service, hook e DTO</h3>
+	<table>
+		<thead><tr><th style="width:26%">Camada</th><th>Responsabilidade</th></tr></thead>
+		<tbody>
+			<tr><td><code>services/</code></td><td>Chamada HTTP e desembrulho do <code>{ data }</code>. Sem estado.</td></tr>
+			<tr><td><code>hooks/</code></td><td><code>useQuery</code>/<code>useMutation</code>, chaves de cache e invalidação.</td></tr>
+			<tr><td><code>shared/dto/</code></td><td>Esquemas zod dos formulários, via <code>zodResolver</code>.</td></tr>
+			<tr><td><code>shared/types/</code></td><td>Formas devolvidas pela API.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		As invalidações de cada módulo estão centralizadas num
+		<code>hooks/module/*/utils.ts</code>, para uma mutação não deixar ecrãs
+		vizinhos com dados velhos.
+	</p>
+
+	<h3>Estado e cache</h3>
+	<ul>
+		<li><strong>TanStack Query</strong> — dados do servidor. Chaves em <em>kebab-case</em> com o id quando aplicável: <code>['accounting-account', id]</code>.</li>
+		<li><strong>Zustand</strong> (<code>store/auth.store.ts</code>) — sessão: tokens e perfil. É de onde o <code>apiClient</code> lê o token.</li>
+		<li><strong>Dados imutáveis</strong> — a referência do PGC usa <code>staleTime: Infinity</code>: é igual para todas as organizações e não muda entre versões.</li>
+	</ul>
+</section>
+
+<!-- ══════════════════════ 11 ══════════════════════ -->
+<section id="validacao">
+	<h2>Validação</h2>
+
+	<p class="lead">
+		Zod nos dois lados, com esquemas de forma equivalente mas propositadamente
+		não partilhados: os projectos são deployados em separado e não têm um pacote
+		comum.
+	</p>
+
+	<table>
+		<thead><tr><th style="width:26%">Lado</th><th>Onde</th><th>Papel</th></tr></thead>
+		<tbody>
+			<tr><td><strong>Frontend</strong></td><td><code>shared/dto/*.dto.ts</code></td><td>Feedback imediato no formulário, via <code>zodResolver</code>.</td></tr>
+			<tr><td><strong>Backend</strong></td><td><code>shared/dto/*.dto.ts</code></td><td>Fronteira de confiança. Valida sempre, ignorando o que o cliente já validou.</td></tr>
+		</tbody>
+	</table>
+
+	<p>
+		Os esquemas convivem com o que os formulários HTML realmente enviam. Dois
+		casos que valem por si:
+	</p>
+	<pre><span class="pre-label">input de data vazio devolve '', não undefined</span><code>date: z.preprocess(
+  (value) =&gt; (value === '' || value === null ? undefined : value),
+  z.coerce.date().optional()
+)</code></pre>
+	<p>
+		Sem o <code>preprocess</code>, <code>z.coerce.date()</code> converte
+		<code>''</code> num <em>Invalid Date</em> e a validação falha com uma mensagem
+		que não ajuda ninguém.
+	</p>
+	<pre><span class="pre-label">no frontend, sem transform</span><code>const optionalExpiryDate = z.string()
+  .refine((v) =&gt; v === '' || !Number.isNaN(Date.parse(v)), 'Data de validade inválida')
+  .nullable().optional();</code></pre>
+	<div class="note">
+		<span class="box-label">Porque não há transform no frontend</span>
+		<p>
+			<code>.transform()</code> faz o tipo de entrada diferir do de saída, e o
+			<code>zodResolver</code> do react-hook-form deixa de casar com o tipo do
+			formulário — o <code>tsc</code> falha. As conversões ficam para o backend.
+		</p>
+	</div>
+
+	<p>
+		As regras que dependem de mais de um campo usam <code>.refine()</code> com
+		<code>path</code>, para o erro aparecer no campo certo — por exemplo, a classe
+		de uma conta ter de corresponder ao primeiro dígito do código.
+	</p>
+</section>
+
+<!-- ══════════════════════ 12 ══════════════════════ -->
+<section id="basededados">
+	<h2>Base de dados e migrações</h2>
+
+	<h3>Prisma e adaptador</h3>
+	<p>
+		Prisma 7 com o adaptador <code>@prisma/adapter-pg</code>. O cliente é gerado
+		para <code>generated/prisma</code> (fora de <code>node_modules</code>) e
+		instanciado uma única vez em <code>config/prisma.config.ts</code>.
+		<code>prisma.config.ts</code> na raiz aponta o schema, o directório de
+		migrações e a <em>datasource</em>.
+	</p>
+	<div class="warn">
+		<span class="box-label">Depois de alterar o schema</span>
+		<p>
+			Corra <code>npx prisma generate</code>. Sem isso o <code>tsc</code> falha
+			com «Property X does not exist» em campos que acabou de acrescentar — o
+			cliente gerado ainda não os conhece.
+		</p>
+	</div>
+
+	<h3>Migrações de dados</h3>
+	<p>
+		Além das de esquema, há migrações que reescrevem dados. O padrão está em
+		<code>align_chart_of_accounts_pgc_angola</code>, que renumerou o plano de
+		contas de estrutura antiga para a do PGC:
+	</p>
+	<ol>
+		<li><strong>Identificar as organizações visadas por um marcador inequívoco</strong> — a conta <code>2432</code>, porque códigos de 4 dígitos não existem no PGC.</li>
+		<li><strong>Desligar a hierarquia</strong> (<code>parentId = NULL</code>), que a aplicação reconstrói depois pelo código.</li>
+		<li><strong>Prefixar os códigos a renumerar</strong> com <code>~</code>. Sem este passo intermédio, renomear <code>42 → 11</code> colidiria com o <code>11</code> antigo na <em>unique</em> <code>(code, organizationId)</code>.</li>
+		<li><strong>Renumerar</strong> cada conta para o código, nome, classe e lado novos.</li>
+		<li><strong>Limpar</strong> o que deixou de fazer sentido, com guarda (<code>NOT EXISTS</code> sobre <code>JournalEntryLine</code>) para não violar chaves estrangeiras.</li>
+	</ol>
+	<p>
+		Renumerar mantendo a mesma linha — em vez de criar contas novas e apagar as
+		antigas — é o que faz os lançamentos e saldos acompanharem a conta.
+	</p>
+	<div class="note">
+		<span class="box-label">Comentários sem acentuação nas migrações</span>
+		<p>
+			Os comentários dos ficheiros <code>.sql</code> seguem a convenção já
+			existente no repositório e não levam acentos, para evitar problemas de
+			codificação em ferramentas que os leiam com outra <em>collation</em>.
+		</p>
+	</div>
+
+	<h3>Seeds</h3>
+	<p>
+		<code>npm run seed</code> corre <code>prisma/seed.ts</code>, que orquestra
+		<code>prisma/seed/*</code> por esta ordem: permissões, módulos, planos,
+		utilizadores e organizações, subscrições, e depois dados de exemplo de
+		tesouraria, stock e séries de facturação. É idempotente por
+		<code>upsert</code>.
+	</p>
+</section>
+
+<!-- ══════════════════════ 13 ══════════════════════ -->
+<section id="deployment">
+	<h2>Deployment e ambiente</h2>
+
+	<h3>Projectos</h3>
+	<table>
+		<thead><tr><th style="width:28%">Projecto Vercel</th><th style="width:22%">Origem</th><th>Notas</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">mpamba-api</td><td>CLI, manual</td><td>Backend. <code>vercel.json</code> reescreve tudo para <code>/api</code>.</td></tr>
+			<tr><td class="mono">mpamba-erp-jx5d</td><td>Git, automático</td><td>Frontend em produção. Deploya o <code>main</code> a cada push.</td></tr>
+			<tr><td class="mono">mpamba-erp</td><td>—</td><td>Projecto duplicado, sem domínio a resolver. É para onde o <code>.vercel</code> local do frontend aponta, o que faz o deploy pelo CLI falhar com <em>Root Directory does not exist</em>.</td></tr>
+		</tbody>
+	</table>
+
+	<h3>Migrações no build</h3>
+	<pre><span class="pre-label">mpamba-backend/vercel.json</span><code>"buildCommand": "npx prisma migrate deploy &amp;&amp; npx prisma generate"</code></pre>
+	<p>
+		As migrações correm no build, que é o único sítio com acesso ao
+		<code>DATABASE_URL</code> de produção — está marcado como <em>sensitive</em> no
+		Vercel e o <code>vercel env pull</code> devolve <code>[SENSITIVE]</code>.
+		Falhando uma migração, o build falha e o deploy anterior continua a servir; o
+		Prisma corre cada migração numa transacção, pelo que a base não fica a meio.
+	</p>
+
+	<h3>Variáveis de ambiente</h3>
+	<table>
+		<thead><tr><th style="width:34%">Variável</th><th>Uso</th></tr></thead>
+		<tbody>
+			<tr><td class="mono">DATABASE_URL</td><td>PostgreSQL. Sensitive em produção.</td></tr>
+			<tr><td class="mono">JWT_SECRET · JWT_REFRESH_SECRET</td><td>Assinatura dos tokens.</td></tr>
+			<tr><td class="mono">JWT_EXPIRES_IN · JWT_REFRESH_EXPIRES_IN</td><td>Validades (<code>15m</code>, <code>30m</code>).</td></tr>
+			<tr><td class="mono">REDIS_HOST · REDIS_PORT · REDIS_PASSWORD</td><td>Cache.</td></tr>
+			<tr><td class="mono">EMAIL_HOST · EMAIL_PORT · EMAIL_USER · EMAIL_PASS</td><td>SMTP: códigos de activação, recuperação de senha, envio de documentos.</td></tr>
+			<tr><td class="mono">RATE_LIMIT_WINDOW · RATE_LIMIT_MAX</td><td>Limitação de pedidos (<code>60</code>s, <code>100</code>).</td></tr>
+			<tr><td class="mono">CRON_SECRET</td><td>Autentica <code>/api/cron/*</code>. Sem ela, as tarefas respondem 503.</td></tr>
+			<tr><td class="mono">NEXT_PUBLIC_API_BASE_URL</td><td>Frontend: base da API.</td></tr>
+		</tbody>
+	</table>
+	<p>
+		<code>shared/utils/env.utils.ts</code> centraliza a leitura com valores por
+		defeito. O <code>.env.example</code> serve de referência.
+	</p>
+
+	<h3>Tarefas agendadas</h3>
+	<pre><span class="pre-label">mpamba-backend/vercel.json</span><code>"crons": [ { "path": "/api/cron/alerts", "schedule": "0 6 * * *" } ]</code></pre>
+	<p>
+		Em serverless não há processo persistente, pelo que o <code>setInterval</code>
+		de <code>src/server.ts</code> nunca corre em produção. As verificações passam
+		por esta rota, protegida por <code>Authorization: Bearer &lt;CRON_SECRET&gt;</code>,
+		que o Vercel envia automaticamente. <code>AlertsService.runChecks()</code>
+		corre as quatro verificações, cada uma no seu <code>try/catch</code>.
+	</p>
+
+	<h3>Ordem de deploy</h3>
+	<ol>
+		<li>Push para <code>main</code> — o frontend deploya sozinho.</li>
+		<li><code>vercel --prod</code> em <code>mpamba-backend</code> — migra e deploya a API.</li>
+	</ol>
+	<div class="warn">
+		<span class="box-label">Janela de inconsistência</span>
+		<p>
+			Entre o deploy do frontend e o da API há um intervalo em que a interface
+			nova fala com a API antiga. Ecrãs que dependam de endpoints novos mostram
+			erro nesse período. Numa alteração que mude o contrato entre os dois,
+			deploye a API primeiro.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════ 14 ══════════════════════ -->
+<section id="testes">
+	<h2>Testes</h2>
+
+	<p>
+		Vitest, ambiente <code>node</code>, sem base de dados: <code>npm test</code>.
+		28 ficheiros, 257 testes. Padrão <code>test/**/*.test.ts</code>.
+	</p>
+
+	<h3>Padrão de mock</h3>
+	<pre><code>vi.mock('../../../src/config/prisma.config.js', () =&gt; ({
+  prisma: { accountingAccount: { findMany: vi.fn() }, journalEntry: { create: vi.fn() } },
+}));
+
+vi.mock('../../../src/shared/utils/organization.context.js', () =&gt; ({
+  organizationContext: {
+    getOrganizationId: vi.fn().mockReturnValue('org-1'),
+    getUserId: vi.fn().mockReturnValue('user-1'),
+    isSuperAdmin: vi.fn().mockReturnValue(false),
+    getStore: vi.fn(),
+  },
+}));</code></pre>
+	<p>
+		Só se declaram os modelos e métodos que o teste usa. O contexto é mockado
+		porque os serviços o leem em vez de o receber.
+	</p>
+
+	<h3>O que vale a pena testar</h3>
+	<ul>
+		<li><strong>DTOs</strong> — com o que o formulário realmente envia, campos vazios incluídos.</li>
+		<li><strong>Regras de recusa</strong> — um teste por motivo de rejeição, e não um teste do «caminho feliz».</li>
+		<li><strong>Integridade de constantes</strong> — <code>chart-of-accounts.test.ts</code> verifica que o plano não tem códigos repetidos, que cada sub-conta tem mãe declarada antes de si, e que as âncoras existem e não agregam sub-contas. Apanha erros de edição no ficheiro de constantes.</li>
+		<li><strong>Funções puras</strong> — comparadores e cálculos de datas, com referência fixa em vez de <code>new Date()</code>.</li>
+	</ul>
+	<div class="note">
+		<span class="box-label">UUIDs nos testes</span>
+		<p>
+			O <code>z.string().uuid()</code> do zod 4 valida a versão e a variante.
+			<code>'11111111-1111-1111-1111-111111111111'</code> é recusado; use
+			<code>'11111111-1111-4111-8111-111111111111'</code>.
+		</p>
+	</div>
+</section>
+
+<!-- ══════════════════════ 15 ══════════════════════ -->
+<section id="armadilhas">
+	<h2>Armadilhas conhecidas</h2>
+
+	<table>
+		<thead><tr><th style="width:32%">Armadilha</th><th>O que fazer</th></tr></thead>
+		<tbody>
+			<tr>
+				<td><strong>Permissão do menu ≠ permissão do guard</strong></td>
+				<td>O item aparece e a acção devolve 403. Foi o que aconteceu com os clientes: o menu pedia <code>customer:view</code> e as rotas exigiam <code>invoice:view</code>. Ao criar um ecrã, confirme que a constante é a mesma dos dois lados.</td>
+			</tr>
+			<tr>
+				<td><strong>Rota literal depois da paramétrica</strong></td>
+				<td><code>/pgc</code> tem de vir antes de <code>/:id</code>, senão é lido como um id.</td>
+			</tr>
+			<tr>
+				<td><strong><code>findUnique({ where: { id } })</code></strong></td>
+				<td>Fura o isolamento entre organizações. Use <code>findFirst</code> com <code>organizationId</code>.</td>
+			</tr>
+			<tr>
+				<td><strong>Ordenar códigos de conta como texto</strong></td>
+				<td><code>ORDER BY code</code> desordena a hierarquia. Use <code>compareAccountCodes</code>.</td>
+			</tr>
+			<tr>
+				<td><strong>Esquecer <code>prisma generate</code></strong></td>
+				<td>O <code>tsc</code> falha em campos novos do schema.</td>
+			</tr>
+			<tr>
+				<td><strong>Subscrever eventos fora da guarda de <code>init()</code></strong></td>
+				<td>Instâncias reaproveitadas acumulam ouvintes e processam o mesmo evento várias vezes.</td>
+			</tr>
+			<tr>
+				<td><strong>Alterar <code>ROLE_TEMPLATES</code> e esperar efeito retroactivo</strong></td>
+				<td>Só afecta organizações novas. Para as existentes, escreva uma migração de dados.</td>
+			</tr>
+			<tr>
+				<td><strong>Numeração por <code>count + 1</code></strong></td>
+				<td><code>JournalEntry.number</code> e outros contadores usam <code>count(...) + 1</code> sem índice único, pelo que podem duplicar sob concorrência. Não corrigido; a correcção passa por índice único mais repetição em caso de conflito.</td>
+			</tr>
+			<tr>
+				<td><strong>Constantes de permissão sem linha na base de dados</strong></td>
+				<td>14 constantes (<code>user_role:*</code>, <code>plan_module:*</code>, <code>organization_module:*</code>, <code>role_permission:create|delete</code>) não estão em <code>PERMISSIONS_LIST</code>. Nenhuma está em uso, mas um <code>permissionGuard</code> sobre elas falharia sempre. Semeie a permissão antes de a usar.</td>
+			</tr>
+			<tr>
+				<td><strong>Permissões semeadas sem constante</strong></td>
+				<td><code>billing:service:*</code> e <code>billing:setting:update</code> existem na base de dados mas não em <code>PERMISSIONS</code>. As rotas de serviços usam hoje <code>invoice:create</code>.</td>
+			</tr>
+			<tr>
+				<td><strong>Módulo activado depois do documento emitido</strong></td>
+				<td>A integração não é retroactiva. Registe os movimentos ou lançamentos de abertura.</td>
+			</tr>
+			<tr>
+				<td><strong>Validade de produto por lote</strong></td>
+				<td><code>Product.expiryDate</code> é um único campo. Vários lotes com validades diferentes exigiriam uma tabela de lotes e saídas por FEFO.</td>
+			</tr>
+		</tbody>
+	</table>
+</section>
+
+<!-- ══════════════════════ 16 ══════════════════════ -->
+<section id="runbooks">
+	<h2>Runbooks</h2>
+
+	<h3>Ambiente local</h3>
+	<pre><code># base de dados e cache
+cd mpamba-backend
+npm install
+npm run docker:up          # Postgres + Redis via docker-compose
+npm run db:migrate         # aplica as migrações
+npm run seed               # dados iniciais (opcional)
+npm run dev                # http://localhost:4000 · docs em /docs
+
+# aplicação web
+cd ../mpamba-frontend
+npm install
+npm run dev                # http://localhost:3000</code></pre>
+	<p>
+		O frontend precisa de <code>NEXT_PUBLIC_API_BASE_URL</code> em
+		<code>.env.local</code>, apontado a <code>http://localhost:4000/api</code>.
+	</p>
+
+	<h3>Deploy para produção</h3>
+	<pre><code>git push origin main                        # frontend deploya sozinho
+cd mpamba-backend &amp;&amp; npx vercel --prod --yes   # migra e deploya a API
+
+# confirmar que as migrações correram
+npx vercel inspect --logs &lt;url-do-deploy&gt; | grep -i migrat</code></pre>
+
+	<h3>Acrescentar uma permissão</h3>
+	<ol>
+		<li><code>prisma/seed/permissions.ts</code> — acrescentar a <code>PERMISSIONS_LIST</code>.</li>
+		<li><code>src/shared/utils/rbac/permission.constants.ts</code> — acrescentar a constante.</li>
+		<li><code>src/shared/utils/rbac/role-templates.constants.ts</code> — atribuir aos perfis que a devem ter.</li>
+		<li><code>mpamba-frontend/src/shared/constants/permission.constants.ts</code> — espelhar.</li>
+		<li>Aplicar no guard da rota e no item de menu, com a <strong>mesma</strong> constante.</li>
+		<li>Migração de dados, se organizações existentes a devem receber.</li>
+	</ol>
+
+	<h3>Acrescentar um módulo de negócio</h3>
+	<ol>
+		<li><code>prisma/seed/modules.ts</code> e <code>plans.ts</code> — registar o módulo e associá-lo aos planos.</li>
+		<li><code>src/routes/module/&lt;novo&gt;/index.ts</code> — <code>authMiddleware</code>, <code>subscriptionGuard</code>, <code>moduleGuard('&lt;código&gt;')</code>.</li>
+		<li><code>base.service.ts</code> do módulo, com os <em>getters</em> de contexto.</li>
+		<li>Montar em <code>src/app.ts</code>.</li>
+		<li>Frontend: <code>app/(modules)/&lt;novo&gt;/</code> com <code>layout.tsx</code> e <code>_components/&lt;novo&gt;.config.ts</code>.</li>
+		<li>Reacções a eventos, se houver, em <code>IntegrationService.init()</code> — dentro da guarda de inicialização.</li>
+	</ol>
+
+	<h3>Regenerar a documentação</h3>
+	<pre><code>node docs/build-manual-pdf.mjs                     # manual do utilizador
+node docs/build-manual-pdf.mjs docs/documentacao-tecnica.html \
+                               docs/Documentacao-Tecnica-Mpamba.pdf</code></pre>
+	<p>
+		O script usa o Chrome instalado, conduzido pelo DevTools Protocol. Não
+		instala dependências.
+	</p>
+
+	<div class="end">
+		Documentação Técnica — Mpamba ERP · Setembro de 2026
+	</div>
+</section>
+
+</body>
+</html>
