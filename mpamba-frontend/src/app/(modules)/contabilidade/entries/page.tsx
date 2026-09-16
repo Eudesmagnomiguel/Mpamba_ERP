@@ -93,8 +93,12 @@ export default function JournalEntriesPage() {
 	// preenchidos. Repetir as regras aqui é o que impede o formulário de dar
 	// «Balanceado ✓» a um lançamento que o servidor vai recusar — era o caso de
 	// uma linha com débito e crédito iguais, que equilibra os totais sozinha.
-	const lineProblem = useMemo(() => {
-		for (let i = 0; i < watchedLines.length; i++) {
+	// Sem useMemo de propósito: `form.watch('lines')` devolve sempre a mesma
+	// referência do array (o react-hook-form muta-o no lugar), por isso um memo
+	// dependente dela nunca recalculava e a mensagem ficava presa no estado
+	// inicial. Como os totais acima, isto calcula-se a cada render.
+	const lineProblem = ((): string | null => {
+		for (let i = 0; i < fields.length; i++) {
 			const line = watchedLines[i];
 			const debit = Number(line?.debit) || 0;
 			const credit = Number(line?.credit) || 0;
@@ -104,7 +108,7 @@ export default function JournalEntriesPage() {
 			if (debit === 0 && credit === 0) return `Linha ${i + 1}: falta o valor a débito ou a crédito.`;
 		}
 		return null;
-	}, [watchedLines]);
+	})();
 
 	const canSubmit = isBalanced && !lineProblem;
 
@@ -436,7 +440,7 @@ export default function JournalEntriesPage() {
 							canSubmit ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'
 						)}>
 							<span>Débito: {fmt(totalDebit)} · Crédito: {fmt(totalCredit)}</span>
-							<span>{canSubmit ? 'Balanceado ✓' : isBalanced ? 'Corrija as linhas' : 'Não balanceado'}</span>
+							<span className="text-right">{canSubmit ? 'Balanceado ✓' : lineProblem || 'Não balanceado'}</span>
 						</div>
 
 						<DialogFooter className="gap-2">
