@@ -127,7 +127,18 @@ export default function JournalEntriesPage() {
 		}
 		try {
 			// Um input de data vazio devolve '', que o backend não consegue converter.
-			await createEntry.mutateAsync({ ...data, date: data.date || undefined });
+			// E um campo de valor vazio devolve NaN, que o JSON transforma em null:
+			// normalizar para 0 aqui é o que garante que o lado não usado da linha
+			// chega ao servidor como zero e não como um valor inválido.
+			await createEntry.mutateAsync({
+				...data,
+				date: data.date || undefined,
+				lines: data.lines.map((line) => ({
+					...line,
+					debit: Number(line.debit) || 0,
+					credit: Number(line.credit) || 0,
+				})),
+			});
 			toast.success('Lançamento registado com sucesso!');
 			setIsCreateOpen(false);
 			form.reset({ description: '', lines: [{ accountId: '', debit: 0, credit: 0 }, { accountId: '', debit: 0, credit: 0 }] });
