@@ -354,6 +354,14 @@ export default function JournalEntriesPage() {
 									<Plus size={12} /> Linha
 								</Button>
 							</div>
+							{/* Cabeçalho das colunas, alinhado com os campos de cada linha: sem
+							    ele o utilizador tinha de adivinhar qual das duas caixas era o débito. */}
+							<div className="flex items-center gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+								<span className="flex-1">Conta</span>
+								<span className="w-28 shrink-0">Débito</span>
+								<span className="w-28 shrink-0">Crédito</span>
+								<span className="w-8 shrink-0" aria-hidden="true" />
+							</div>
 							<div className="border border-slate-200 rounded-sm divide-y divide-slate-100 max-h-72 overflow-y-auto">
 								{fields.map((field, index) => {
 									const line = watchedLines[index];
