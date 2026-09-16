@@ -26,10 +26,19 @@ export const updateAccountSchema = z.object({
 	isActive: z.boolean().optional(),
 });
 
+// Um campo de valor limpo no formulário chega como null, e `.default(0)` só
+// cobre `undefined` — sem este preprocess o lançamento era recusado com
+// «Dados inválidos» em vez de ser lido como zero.
+const amountField = z.preprocess(
+	(value) =>
+		value === '' || value === null || (typeof value === 'number' && Number.isNaN(value)) ? undefined : value,
+	z.number().min(0).default(0),
+);
+
 export const journalEntryLineSchema = z.object({
 	accountId: z.string().uuid('Conta inválida'),
-	debit: z.number().min(0).default(0),
-	credit: z.number().min(0).default(0),
+	debit: amountField,
+	credit: amountField,
 	description: z.string().optional(),
 });
 

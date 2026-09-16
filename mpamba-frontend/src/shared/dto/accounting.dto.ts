@@ -26,12 +26,41 @@ export const UpdateAccountingAccountSchema = z.object({
 	isActive: z.boolean().optional(),
 });
 
-export const JournalEntryLineSchema = z.object({
-	accountId: z.string().uuid('Conta inválida'),
-	debit: z.number().min(0).optional(),
-	credit: z.number().min(0).optional(),
-	description: z.string().optional(),
-});
+// Um campo numérico vazio devolve NaN (`valueAsNumber`). Lê-lo como «sem
+// valor» deixa o utilizador limpar o lado que não usa sem levar com um erro de
+// validação — o NaN é tratado antes de `z.number()`, que o recusaria.
+const amountField = z
+	.union([z.nan().transform(() => undefined), z.number().min(0, 'O valor não pode ser negativo')])
+	.optional();
+
+export const JournalEntryLineSchema = z
+	.object({
+		accountId: z.string().uuid('Conta inválida'),
+		debit: amountField,
+		credit: amountField,
+		description: z.string().optional(),
+	})
+	.superRefine((line, ctx) => {
+		const debit = line.debit || 0;
+		const credit = line.credit || 0;
+
+		// Na partida dobrada cada linha move uma conta num só sentido. O valor a
+		// crédito vai numa linha própria, com a sua conta.
+		if (debit > 0 && credit > 0) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['credit'],
+				message: 'Uma linha leva débito ou crédito, nunca os dois',
+			});
+		}
+		if (debit === 0 && credit === 0) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['debit'],
+				message: 'Indique o valor a débito ou a crédito',
+			});
+		}
+	});
 
 export const CreateManualEntrySchema = z.object({
 	date: z.string().optional(),

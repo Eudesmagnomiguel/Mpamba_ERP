@@ -29,15 +29,19 @@ export class JournalService extends BaseAccountingService {
 		let totalDebit = 0;
 		let totalCredit = 0;
 
-		for (const line of lines) {
+		for (const [index, line] of lines.entries()) {
 			const debit = line.debit || 0;
 			const credit = line.credit || 0;
 
+			// O número da linha vai na mensagem: num lançamento com várias linhas,
+			// dizer só o que está errado não diz onde corrigir.
 			if (debit > 0 && credit > 0) {
-				throw new Error('Uma linha não pode ter débito e crédito em simultâneo');
+				throw new Error(
+					`Linha ${index + 1}: uma linha leva débito ou crédito, nunca os dois. Ponha o valor num dos lados e registe a contrapartida noutra linha`,
+				);
 			}
 			if (debit === 0 && credit === 0) {
-				throw new Error('Cada linha precisa de um valor de débito ou de crédito');
+				throw new Error(`Linha ${index + 1}: falta o valor a débito ou a crédito`);
 			}
 
 			totalDebit += debit;

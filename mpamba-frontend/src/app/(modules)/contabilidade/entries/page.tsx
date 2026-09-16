@@ -89,6 +89,25 @@ export default function JournalEntriesPage() {
 	const totalCredit = watchedLines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
 	const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
 
+	// O servidor recusa linhas sem conta, sem valor, ou com os dois lados
+	// preenchidos. Repetir as regras aqui é o que impede o formulário de dar
+	// «Balanceado ✓» a um lançamento que o servidor vai recusar — era o caso de
+	// uma linha com débito e crédito iguais, que equilibra os totais sozinha.
+	const lineProblem = useMemo(() => {
+		for (let i = 0; i < watchedLines.length; i++) {
+			const line = watchedLines[i];
+			const debit = Number(line?.debit) || 0;
+			const credit = Number(line?.credit) || 0;
+
+			if (!line?.accountId) return `Linha ${i + 1}: escolha a conta.`;
+			if (debit > 0 && credit > 0) return `Linha ${i + 1}: leva débito ou crédito, nunca os dois.`;
+			if (debit === 0 && credit === 0) return `Linha ${i + 1}: falta o valor a débito ou a crédito.`;
+		}
+		return null;
+	}, [watchedLines]);
+
+	const canSubmit = isBalanced && !lineProblem;
+
 	const toggleExpand = (id: string) => {
 		setExpanded((prev) => {
 			const next = new Set(prev);
@@ -98,6 +117,10 @@ export default function JournalEntriesPage() {
 	};
 
 	const handleCreate = form.handleSubmit(async (data) => {
+		if (lineProblem) {
+			toast.error(lineProblem);
+			return;
+		}
 		if (!isBalanced) {
 			toast.error('O lançamento tem de estar balanceado (débito = crédito).');
 			return;
@@ -317,61 +340,97 @@ export default function JournalEntriesPage() {
 								</Button>
 							</div>
 							<div className="border border-slate-200 rounded-sm divide-y divide-slate-100 max-h-72 overflow-y-auto">
-								{fields.map((field, index) => (
-									<div key={field.id} className="p-3 flex items-center gap-2">
-										<div className="flex-1">
-											<Select onValueChange={(v) => form.setValue(`lines.${index}.accountId`, v)}>
-												<SelectTrigger className="h-9 border-slate-200 rounded-sm text-xs">
-													<SelectValue placeholder="Conta..." />
-												</SelectTrigger>
-												<SelectContent>
-													{movableAccounts.map((acc) => (
-														<SelectItem key={acc.id} value={acc.id}>{acc.code} — {acc.name}</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
+								{fields.map((field, index) => {
+									const line = watchedLines[index];
+									const lineDebit = Number(line?.debit) || 0;
+									const lineCredit = Number(line?.credit) || 0;
+									const bothSides = lineDebit > 0 && lineCredit > 0;
+									const noSide = lineDebit === 0 && lineCredit === 0;
+
+									return (
+										<div key={field.id} className="p-3 space-y-1.5">
+											<div className="flex items-center gap-2">
+												<div className="flex-1">
+													<Select value={line?.accountId || ''} onValueChange={(v) => form.setValue(`lines.${index}.accountId`, v)}>
+														<SelectTrigger className="h-9 border-slate-200 rounded-sm text-xs">
+															<SelectValue placeholder="Conta..." />
+														</SelectTrigger>
+														<SelectContent>
+															{movableAccounts.map((acc) => (
+																<SelectItem key={acc.id} value={acc.id}>{acc.code} — {acc.name}</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<Input
+													type="number"
+													step="0.01"
+													min="0"
+													placeholder="Débito"
+													className={cn('h-9 w-28 border-slate-200 rounded-sm text-xs', bothSides && 'border-rose-300')}
+													onFocus={(e) => e.target.select()}
+													{...form.register(`lines.${index}.debit`, {
+														valueAsNumber: true,
+														// Cada linha só leva um dos lados. Limpar o lado oposto
+														// assim que o utilizador escreve evita o caso em que o
+														// formulário dizia «Balanceado» e o servidor recusava
+														// com «não pode ter débito e crédito em simultâneo».
+														onChange: (e) => {
+															if (Number(e.target.value) > 0) form.setValue(`lines.${index}.credit`, 0);
+														},
+													})}
+												/>
+												<Input
+													type="number"
+													step="0.01"
+													min="0"
+													placeholder="Crédito"
+													className={cn('h-9 w-28 border-slate-200 rounded-sm text-xs', bothSides && 'border-rose-300')}
+													onFocus={(e) => e.target.select()}
+													{...form.register(`lines.${index}.credit`, {
+														valueAsNumber: true,
+														onChange: (e) => {
+															if (Number(e.target.value) > 0) form.setValue(`lines.${index}.debit`, 0);
+														},
+													})}
+												/>
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 text-slate-400 hover:text-rose-600 rounded-sm shrink-0"
+													onClick={() => fields.length > 2 && remove(index)}
+													disabled={fields.length <= 2}
+												>
+													<Trash2 size={13} />
+												</Button>
+											</div>
+											{bothSides && (
+												<p className="text-[10px] text-rose-500">
+													Esta linha tem débito e crédito ao mesmo tempo. Ponha o valor num dos lados e registe a contrapartida noutra linha.
+												</p>
+											)}
+											{!bothSides && noSide && !!line?.accountId && (
+												<p className="text-[10px] text-amber-600">Indique o valor a débito ou a crédito.</p>
+											)}
 										</div>
-										<Input
-											type="number"
-											step="0.01"
-											placeholder="Débito"
-											className="h-9 w-28 border-slate-200 rounded-sm text-xs"
-											{...form.register(`lines.${index}.debit`, { valueAsNumber: true })}
-										/>
-										<Input
-											type="number"
-											step="0.01"
-											placeholder="Crédito"
-											className="h-9 w-28 border-slate-200 rounded-sm text-xs"
-											{...form.register(`lines.${index}.credit`, { valueAsNumber: true })}
-										/>
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8 text-slate-400 hover:text-rose-600 rounded-sm shrink-0"
-											onClick={() => fields.length > 2 && remove(index)}
-											disabled={fields.length <= 2}
-										>
-											<Trash2 size={13} />
-										</Button>
-									</div>
-								))}
+									);
+								})}
 							</div>
 							{form.formState.errors.lines && <p className="text-[10px] text-rose-500">{form.formState.errors.lines.message as string}</p>}
 						</div>
 
 						<div className={cn(
 							'flex items-center justify-between p-3 rounded-sm border text-xs font-bold',
-							isBalanced ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'
+							canSubmit ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'
 						)}>
 							<span>Débito: {fmt(totalDebit)} · Crédito: {fmt(totalCredit)}</span>
-							<span>{isBalanced ? 'Balanceado ✓' : 'Não balanceado'}</span>
+							<span>{canSubmit ? 'Balanceado ✓' : isBalanced ? 'Corrija as linhas' : 'Não balanceado'}</span>
 						</div>
 
 						<DialogFooter className="gap-2">
 							<Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="border-slate-200 rounded-sm h-10 text-sm">Cancelar</Button>
-							<Button type="submit" disabled={createEntry.isPending || !isBalanced} className="bg-primary hover:bg-primary text-white rounded-sm h-10 text-sm px-6">
+							<Button type="submit" disabled={createEntry.isPending || !canSubmit} className="bg-primary hover:bg-primary text-white rounded-sm h-10 text-sm px-6">
 								{createEntry.isPending ? <Loader2 size={15} className="animate-spin" /> : 'Registar Lançamento'}
 							</Button>
 						</DialogFooter>
